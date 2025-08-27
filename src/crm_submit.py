@@ -2,8 +2,12 @@ import json
 import csv
 import logging
 from datetime import datetime
-from typing import Dict, List
+from typing import Dict, List, Optional
 import os
+import requests
+from requests.auth import HTTPBasicAuth
+import zeep  # For SOAP API
+from urllib.parse import urljoin
 
 class CRMSubmitter:
     """Handles CRM submission and logging."""
@@ -227,3 +231,368 @@ class CRMSubmitter:
             self.logger.error(f"Failed to read CRM log: {str(e)}")
         
         return stats
+
+
+class NetSuiteConnector:
+    """NetSuite integration connector supporting SOAP, REST, and SuiteQL."""
+
+    def __init__(self, config: Dict):
+        """
+        Initialize NetSuite connector.
+
+        Args:
+            config: Dictionary containing:
+                - account_id: NetSuite account ID
+                - consumer_key: OAuth consumer key (for REST)
+                - consumer_secret: OAuth consumer secret (for REST)
+                - token_id: OAuth token ID (for REST)
+                - token_secret: OAuth token secret (for REST)
+                - email: NetSuite user email (for SOAP)
+                - password: NetSuite user password (for SOAP)
+                - role_id: NetSuite role ID (for SOAP)
+                - app_id: Application ID (for SOAP)
+                - api_type: 'soap', 'rest', or 'suiteql'
+        """
+        self.config = config
+        self.api_type = config.get('api_type', 'rest').lower()
+        self.logger = logging.getLogger(__name__)
+
+        # Base URLs
+        self.rest_base_url = f"https://{config['account_id']}.suitetalk.api.netsuite.com/services/rest"
+        self.soap_base_url = f"https://{config['account_id']}.suitetalk.api.netsuite.com/services/NetSuitePort_2023_1"
+
+        # Initialize appropriate client
+        if self.api_type == 'soap':
+            self._init_soap_client()
+        elif self.api_type == 'rest':
+            self._init_rest_client()
+        elif self.api_type == 'suiteql':
+            self._init_suiteql_client()
+
+    def _init_soap_client(self):
+        """Initialize SOAP client."""
+        try:
+            from zeep import Client
+            from zeep.transports import Transport
+            from requests import Session
+
+            # Create session with authentication
+            session = Session()
+            session.auth = HTTPBasicAuth(self.config['email'], self.config['password'])
+
+            # Add required headers
+            session.headers.update({
+                'Content-Type': 'text/xml;charset=UTF-8',
+                'SOAPAction': ''
+            })
+
+            transport = Transport(session=session)
+            self.soap_client = Client(
+                f"{self.soap_base_url}?wsdl",
+                transport=transport
+            )
+
+            # Set application info
+            self.soap_client.service.setApplicationInfo(
+                applicationId=self.config.get('app_id', 'MoneyPulse')
+            )
+
+        except ImportError:
+            raise ImportError("zeep package required for SOAP API. Install with: pip install zeep")
+
+    def _init_rest_client(self):
+        """Initialize REST client with OAuth."""
+        self.session = requests.Session()
+
+        # Set up OAuth 1.0 authentication
+        from requests_oauthlib import OAuth1
+        oauth = OAuth1(
+            self.config['consumer_key'],
+            self.config['consumer_secret'],
+            self.config['token_id'],
+            self.config['token_secret'],
+            signature_method='HMAC-SHA256'
+        )
+        self.session.auth = oauth
+
+        # Set headers
+        self.session.headers.update({
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        })
+
+    def _init_suiteql_client(self):
+        """Initialize SuiteQL client."""
+        self._init_rest_client()  # SuiteQL uses REST transport
+
+    def submit_financial_document(self, document_data: Dict) -> Dict:
+        """
+        Submit processed financial document to NetSuite.
+
+        Args:
+            document_data: Structured document data from MoneyPulse
+
+        Returns:
+            Dictionary with submission results
+        """
+        try:
+            if self.api_type == 'soap':
+                return self._submit_via_soap(document_data)
+            elif self.api_type == 'rest':
+                return self._submit_via_rest(document_data)
+            elif self.api_type == 'suiteql':
+                return self._submit_via_suiteql(document_data)
+            else:
+                raise ValueError(f"Unsupported API type: {self.api_type}")
+
+        except Exception as e:
+            self.logger.error(f"NetSuite submission failed: {str(e)}")
+            return {
+                "status": "failed",
+                "error": str(e),
+                "api_type": self.api_type,
+                "timestamp": datetime.now().isoformat()
+            }
+
+    def _submit_via_soap(self, document_data: Dict) -> Dict:
+        """Submit document via NetSuite SOAP API."""
+        try:
+            # Create customer record (example - adapt based on your needs)
+            customer_data = self._map_to_customer_record(document_data)
+
+            # Call NetSuite SOAP API
+            response = self.soap_client.service.add(customer_data)
+
+            return {
+                "status": "success",
+                "api_type": "soap",
+                "netsuite_id": response.baseRef.internalId,
+                "record_type": "customer",
+                "timestamp": datetime.now().isoformat()
+            }
+
+        except Exception as e:
+            return {
+                "status": "failed",
+                "api_type": "soap",
+                "error": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
+
+    def _submit_via_rest(self, document_data: Dict) -> Dict:
+        """Submit document via NetSuite REST API."""
+        try:
+            # Create customer record
+            customer_data = self._map_to_customer_record(document_data)
+
+            # POST to NetSuite REST API
+            url = urljoin(self.rest_base_url, "/record/v1/customer")
+            response = self.session.post(url, json=customer_data)
+
+            if response.status_code in [200, 201]:
+                result = response.json()
+                return {
+                    "status": "success",
+                    "api_type": "rest",
+                    "netsuite_id": result.get('id'),
+                    "record_type": "customer",
+                    "timestamp": datetime.now().isoformat()
+                }
+            else:
+                return {
+                    "status": "failed",
+                    "api_type": "rest",
+                    "error": f"HTTP {response.status_code}: {response.text}",
+                    "timestamp": datetime.now().isoformat()
+                }
+
+        except Exception as e:
+            return {
+                "status": "failed",
+                "api_type": "rest",
+                "error": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
+
+    def _submit_via_suiteql(self, document_data: Dict) -> Dict:
+        """Submit document via SuiteQL."""
+        try:
+            # Example: Insert customer data using SuiteQL
+            query = """
+            INSERT INTO Customer (
+                CompanyName, Email, Phone, Addr1, City, State, Zip
+            ) VALUES (
+                ?, ?, ?, ?, ?, ?, ?
+            )
+            """
+
+            params = [
+                document_data.get('merchant_information', {}).get('name', ''),
+                document_data.get('contact_information', {}).get('email', ''),
+                document_data.get('contact_information', {}).get('phone', ''),
+                document_data.get('address', {}).get('street', ''),
+                document_data.get('address', {}).get('city', ''),
+                document_data.get('address', {}).get('state', ''),
+                document_data.get('address', {}).get('zip', '')
+            ]
+
+            url = urljoin(self.rest_base_url, "/query/v1/suiteql")
+            payload = {
+                "q": query,
+                "p": params
+            }
+
+            response = self.session.post(url, json=payload)
+
+            if response.status_code in [200, 201]:
+                result = response.json()
+                return {
+                    "status": "success",
+                    "api_type": "suiteql",
+                    "inserted_rows": result.get('rows_affected', 0),
+                    "timestamp": datetime.now().isoformat()
+                }
+            else:
+                return {
+                    "status": "failed",
+                    "api_type": "suiteql",
+                    "error": f"HTTP {response.status_code}: {response.text}",
+                    "timestamp": datetime.now().isoformat()
+                }
+
+        except Exception as e:
+            return {
+                "status": "failed",
+                "api_type": "suiteql",
+                "error": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
+
+    def _map_to_customer_record(self, document_data: Dict) -> Dict:
+        """Map MoneyPulse document data to NetSuite customer record."""
+        merchant_info = document_data.get('merchant_information', {})
+        contact_info = document_data.get('contact_information', {})
+        address_info = document_data.get('address', {})
+
+        # SOAP format
+        if self.api_type == 'soap':
+            return {
+                'name': merchant_info.get('name', ''),
+                'email': contact_info.get('email', ''),
+                'phone': contact_info.get('phone', ''),
+                'addressbookList': {
+                    'addressbook': {
+                        'addr1': address_info.get('street', ''),
+                        'city': address_info.get('city', ''),
+                        'state': address_info.get('state', ''),
+                        'zip': address_info.get('zip', ''),
+                        'country': 'US'
+                    }
+                },
+                'customForm': '-40',  # Standard customer form
+                'isPerson': False
+            }
+
+        # REST format
+        else:
+            return {
+                'companyname': merchant_info.get('name', ''),
+                'email': contact_info.get('email', ''),
+                'phone': contact_info.get('phone', ''),
+                'addressbook': {
+                    'items': [{
+                        'addr1': address_info.get('street', ''),
+                        'city': address_info.get('city', ''),
+                        'state': address_info.get('state', ''),
+                        'zip': address_info.get('zip', ''),
+                        'country': 'US'
+                    }]
+                }
+            }
+
+    def query_customer_data(self, customer_id: str) -> Dict:
+        """Query existing customer data using SuiteQL."""
+        if self.api_type != 'suiteql':
+            raise ValueError("SuiteQL required for customer queries")
+
+        try:
+            query = f"""
+            SELECT
+                CompanyName, Email, Phone,
+                Addr1, City, State, Zip
+            FROM
+                Customer
+            WHERE
+                InternalId = ?
+            """
+
+            url = urljoin(self.rest_base_url, "/query/v1/suiteql")
+            payload = {
+                "q": query,
+                "p": [customer_id]
+            }
+
+            response = self.session.post(url, json=payload)
+
+            if response.status_code == 200:
+                return {
+                    "status": "success",
+                    "data": response.json(),
+                    "timestamp": datetime.now().isoformat()
+                }
+            else:
+                return {
+                    "status": "failed",
+                    "error": f"HTTP {response.status_code}: {response.text}",
+                    "timestamp": datetime.now().isoformat()
+                }
+
+        except Exception as e:
+            return {
+                "status": "failed",
+                "error": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
+
+
+class NetSuiteSubmitter(CRMSubmitter):
+    """Extended CRM submitter with NetSuite integration."""
+
+    def __init__(self, output_dir: str = "output", netsuite_config: Optional[Dict] = None):
+        super().__init__(output_dir)
+        self.netsuite_config = netsuite_config
+        self.netsuite_connector = None
+
+        if netsuite_config:
+            try:
+                self.netsuite_connector = NetSuiteConnector(netsuite_config)
+                self.logger.info("NetSuite connector initialized successfully")
+            except Exception as e:
+                self.logger.error(f"Failed to initialize NetSuite connector: {str(e)}")
+
+    def submit_document(self, parsed_data: Dict) -> Dict:
+        """Submit document to both CRM and NetSuite if configured."""
+        # First do the standard CRM submission
+        crm_result = super().submit_document(parsed_data)
+
+        # Then submit to NetSuite if configured
+        netsuite_result = None
+        if self.netsuite_connector:
+            try:
+                netsuite_result = self.netsuite_connector.submit_financial_document(
+                    parsed_data
+                )
+                self.logger.info(f"NetSuite submission result: {netsuite_result}")
+            except Exception as e:
+                netsuite_result = {
+                    "status": "failed",
+                    "error": str(e),
+                    "timestamp": datetime.now().isoformat()
+                }
+                self.logger.error(f"NetSuite submission failed: {str(e)}")
+
+        return {
+            "crm_result": crm_result,
+            "netsuite_result": netsuite_result,
+            "integrated_submission": self.netsuite_connector is not None
+        }

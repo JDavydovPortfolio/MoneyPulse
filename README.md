@@ -258,6 +258,113 @@ MoneyPulse processes a wide range of financial documents with high accuracy:
 - **Data-Driven Operations**: Structured data enables advanced analytics and business intelligence
 - **Technology Leadership**: Future-proof AI foundation adapts to evolving document formats
 
+## 🔗 NetSuite Integration
+
+MoneyPulse offers seamless integration with NetSuite, supporting all three API approaches for maximum flexibility and reliability.
+
+### Supported NetSuite APIs
+
+#### 1. **REST API** (Recommended for New Implementations)
+- **Best For**: Modern integrations, easier development
+- **Authentication**: OAuth 2.0 / OAuth 1.0
+- **Use Case**: Standard customer record creation and updates
+
+#### 2. **SOAP API** (Enterprise-Grade)
+- **Best For**: Complex integrations, maximum reliability
+- **Authentication**: Email/Password or Token-based
+- **Use Case**: Full NetSuite functionality access
+
+#### 3. **SuiteQL** (Data-Driven)
+- **Best For**: Direct database operations, complex queries
+- **Authentication**: OAuth (REST transport)
+- **Use Case**: Advanced data manipulation and reporting
+
+### Integration Setup
+
+#### Prerequisites
+```bash
+pip install requests-oauthlib zeep  # Install NetSuite integration packages
+```
+
+#### Configuration Example
+```python
+netsuite_config = {
+    'account_id': 'your-account-id',
+    'api_type': 'rest',  # 'soap', 'rest', or 'suiteql'
+
+    # For REST API
+    'consumer_key': 'your-consumer-key',
+    'consumer_secret': 'your-consumer-secret',
+    'token_id': 'your-token-id',
+    'token_secret': 'your-token-secret',
+
+    # For SOAP API (alternative)
+    'email': 'user@company.com',
+    'password': 'password',
+    'role_id': '3',
+    'app_id': 'MoneyPulse'
+}
+```
+
+#### Usage Example
+```python
+from src.crm_submit import NetSuiteSubmitter
+
+# Initialize with NetSuite configuration
+submitter = NetSuiteSubmitter(
+    output_dir="output",
+    netsuite_config=netsuite_config
+)
+
+# Submit processed document to NetSuite
+result = submitter.submit_document(processed_document_data)
+print(f"NetSuite Result: {result['netsuite_result']}")
+```
+
+### Data Mapping
+
+MoneyPulse automatically maps processed document data to NetSuite records:
+
+#### Customer Records
+- **Company Name**: Merchant/Business name
+- **Contact Information**: Email and phone from documents
+- **Address**: Business address with proper formatting
+- **Custom Fields**: Processing metadata and validation status
+
+#### Integration Features
+- **Duplicate Detection**: Checks for existing customers before creation
+- **Data Validation**: Ensures data integrity before NetSuite submission
+- **Error Handling**: Comprehensive logging and retry mechanisms
+- **Batch Processing**: Submit multiple documents simultaneously
+
+### Security & Compliance
+
+#### Enterprise Security
+- **Encrypted Communication**: All API calls use HTTPS/TLS
+- **Secure Authentication**: OAuth tokens with proper scope limitations
+- **Data Privacy**: No sensitive data stored locally
+- **Audit Trail**: Complete logging of all NetSuite operations
+
+#### Compliance Features
+- **GDPR Compliance**: Data processing transparency
+- **SOX Compliance**: Financial data handling standards
+- **Data Residency**: Respects regional data requirements
+- **Access Controls**: Role-based permissions and approvals
+
+### Monitoring & Analytics
+
+#### Integration Dashboard
+- **Submission Statistics**: Success rates and error tracking
+- **Performance Metrics**: API response times and throughput
+- **Data Quality Scores**: Validation results and confidence metrics
+- **Sync Status**: Real-time integration health monitoring
+
+#### Business Intelligence
+- **Conversion Analytics**: Document-to-customer conversion rates
+- **Processing Efficiency**: Time savings and productivity metrics
+- **Error Analysis**: Common issues and resolution patterns
+- **ROI Tracking**: Cost savings and business value metrics
+
 ## ⚙️ Configuration
 
 ### LLM Settings
