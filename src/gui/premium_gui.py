@@ -57,26 +57,21 @@ class DropArea(QLabel):
         self.setAcceptDrops(True)
         self.setAlignment(Qt.AlignCenter)
         self.setMinimumHeight(150)
-        self.setText("💼 Drag & Drop Financial Documents Here\n\nSupported: PDF, PNG, JPG, JPEG\n\n✨ AI will extract and process your data instantly")
+        self.setText("Drag & Drop Financial Documents Here\n\nSupported: PDF, PNG, JPG, JPEG\n\nAI-powered extraction and processing")
         self.setStyleSheet("""
             QLabel {
-                border: 2px dashed #4CAF50;
-                border-radius: 15px;
-                padding: 30px;
-                font-size: 15px;
-                font-weight: 500;
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1, 
-                    stop:0 rgba(76, 175, 80, 0.1), 
-                    stop:1 rgba(33, 150, 243, 0.1));
-                color: #4CAF50;
-                line-height: 1.6;
+                border: 2px dashed #2E7D32;
+                border-radius: 8px;
+                padding: 25px;
+                font-size: 14px;
+                font-weight: 400;
+                background-color: rgba(46, 125, 50, 0.08);
+                color: #2E7D32;
+                line-height: 1.5;
             }
             QLabel:hover {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1, 
-                    stop:0 rgba(76, 175, 80, 0.2), 
-                    stop:1 rgba(33, 150, 243, 0.2));
-                transform: scale(1.02);
-                transition: all 0.3s ease;
+                background-color: rgba(46, 125, 50, 0.12);
+                border-color: #1B5E20;
             }
         """)
     
@@ -85,32 +80,28 @@ class DropArea(QLabel):
             event.acceptProposedAction()
             self.setStyleSheet("""
                 QLabel {
-                    border: 2px solid #4CAF50;
-                    border-radius: 15px;
-                    padding: 30px;
-                    font-size: 15px;
-                    font-weight: 500;
-                    background: qlineargradient(x1:0, y1:0, x2:1, y2:1, 
-                        stop:0 rgba(76, 175, 80, 0.4), 
-                        stop:1 rgba(33, 150, 243, 0.4));
-                    color: #4CAF50;
-                    line-height: 1.6;
+                    border: 2px solid #2E7D32;
+                    border-radius: 8px;
+                    padding: 25px;
+                    font-size: 14px;
+                    font-weight: 400;
+                    background-color: rgba(46, 125, 50, 0.15);
+                    color: #2E7D32;
+                    line-height: 1.5;
                 }
             """)
     
     def dragLeaveEvent(self, event):
         self.setStyleSheet("""
             QLabel {
-                border: 2px dashed #4CAF50;
-                border-radius: 15px;
-                padding: 30px;
-                font-size: 15px;
-                font-weight: 500;
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1, 
-                    stop:0 rgba(76, 175, 80, 0.1), 
-                    stop:1 rgba(33, 150, 243, 0.1));
-                color: #4CAF50;
-                line-height: 1.6;
+                border: 2px dashed #2E7D32;
+                border-radius: 8px;
+                padding: 25px;
+                font-size: 14px;
+                font-weight: 400;
+                background-color: rgba(46, 125, 50, 0.08);
+                color: #2E7D32;
+                line-height: 1.5;
             }
         """)
     
@@ -134,9 +125,9 @@ class PremiumDocumentProcessor(QMainWindow):
     
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("💰 MoneyPulse - Where Finance Meets AI")
+        self.setWindowTitle("MoneyPulse - Where Finance Meets AI")
         self.setMinimumSize(1400, 900)
-        self.setWindowIcon(qta.icon('fa5s.money-bill-wave', color='#4CAF50'))
+        self.setWindowIcon(qta.icon('fa5s.chart-line', color='#2E7D32'))
         
         # Initialize variables
         self.selected_files = []
@@ -720,25 +711,22 @@ def launch_application():
     }
     
     QPushButton {
-        background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
-            stop:0 #4CAF50, stop:1 #45a049);
-        border: none;
-        border-radius: 8px;
-        padding: 12px 24px;
-        font-weight: 600;
-        font-size: 14px;
+        background-color: #2E7D32;
+        border: 1px solid #1B5E20;
+        border-radius: 6px;
+        padding: 10px 20px;
+        font-weight: 500;
+        font-size: 13px;
         color: white;
     }
     
     QPushButton:hover {
-        background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
-            stop:0 #5CBF60, stop:1 #4CAF50);
-        transform: translateY(-2px);
+        background-color: #388E3C;
+        border-color: #2E7D32;
     }
     
     QPushButton:pressed {
-        background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
-            stop:0 #45a049, stop:1 #3d8b40);
+        background-color: #1B5E20;
     }
     
     QPushButton:disabled {
@@ -747,12 +735,12 @@ def launch_application():
     }
     
     QGroupBox {
-        border: 2px solid #4CAF50;
-        border-radius: 12px;
-        margin: 10px;
-        padding: 15px;
-        font-weight: bold;
-        color: #4CAF50;
+        border: 1px solid #2E7D32;
+        border-radius: 6px;
+        margin: 8px;
+        padding: 12px;
+        font-weight: 500;
+        color: #2E7D32;
     }
     
     QGroupBox::title {
@@ -763,37 +751,36 @@ def launch_application():
     }
     
     QTextEdit, QListWidget {
-        border: 1px solid #4CAF50;
-        border-radius: 8px;
+        border: 1px solid #2E7D32;
+        border-radius: 4px;
         padding: 8px;
         background: #1a1a1a;
-        selection-background-color: #4CAF50;
+        selection-background-color: #2E7D32;
     }
     
     QProgressBar {
-        border: 2px solid #4CAF50;
-        border-radius: 8px;
+        border: 1px solid #2E7D32;
+        border-radius: 4px;
         text-align: center;
-        font-weight: bold;
+        font-weight: 500;
     }
     
     QProgressBar::chunk {
-        background: qlineargradient(x1:0, y1:0, x2:1, y2:0, 
-            stop:0 #4CAF50, stop:1 #2196F3);
-        border-radius: 6px;
+        background-color: #2E7D32;
+        border-radius: 3px;
     }
     
     QStatusBar {
         background: #1e1e1e;
-        border-top: 1px solid #4CAF50;
-        color: #4CAF50;
+        border-top: 1px solid #2E7D32;
+        color: #2E7D32;
     }
     """
     
     app.setStyleSheet(dark_theme + custom_style)
     
     # Set application properties
-    app.setApplicationName("💰 MoneyPulse - Where Finance Meets AI")
+    app.setApplicationName("MoneyPulse - Where Finance Meets AI")
     app.setApplicationVersion("1.0.0")
     app.setOrganizationName("MoneyPulse Suite")
     
