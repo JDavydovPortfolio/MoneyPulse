@@ -1,0 +1,38 @@
+{
+  "merchant_information": {
+    "name": "",
+    "ein_or_ssn": "",
+    "business_type": "",
+    "years_in_business": "",
+    "annual_revenue": ""
+  },
+  "contact_information": {
+    "phone": "",
+    "email": ""
+  },
+  "address": {
+    "street": "",
+    "city": "",
+    "state": "",
+    "zip": ""
+  },
+  "application_details": {
+    "document_type": "error",
+    "submission_date": "",
+    "requested_amount": ""
+  },
+  "processing_metadata": {
+    "source_file": "sample_mca_application.pdf",
+    "validation_status": "failed",
+    "requires_human_review": true,
+    "confidence_score": 0.1,
+    "flagged_issues": [
+      "Processing error: Cannot connect to Ollama. Please ensure 'ollama serve' is running.",
+      "Invalid EIN/SSN format: '' (must be exactly 9 digits)",
+      "Invalid ZIP code: '' (must be exactly 5 digits)",
+      "Missing required field: merchant_name"
+    ],
+    "processing_timestamp": "2025-08-26T02:50:47.710677",
+    "validation_timestamp": "2025-08-26T02:50:47.711714"
+  }
+}

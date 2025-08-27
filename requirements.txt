@@ -1,0 +1,18 @@
+# Core document processing
+pytesseract==0.3.10
+pdf2image==1.16.3
+opencv-python>=4.10.0  # Updated for NumPy 2.x compatibility
+Pillow>=10.3.0  # Updated for Python 3.13 compatibility
+requests==2.31.0
+numpy>=1.26.0  # Allow NumPy 2.x for Python 3.13
+
+# Premium GUI components
+PySide6>=6.5.2
+PySide6-Addons>=6.5.2
+qtawesome>=1.2.3
+qdarkstyle>=3.2.3
+pyqtgraph>=0.13.3
+
+# Additional utilities
+python-dotenv>=1.0.0
+pyinstaller>=5.13.2
