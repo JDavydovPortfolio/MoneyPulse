@@ -258,72 +258,68 @@ MoneyPulse processes a wide range of financial documents with high accuracy:
 - **Data-Driven Operations**: Structured data enables advanced analytics and business intelligence
 - **Technology Leadership**: Future-proof AI foundation adapts to evolving document formats
 
-## 🔗 NetSuite Integration
+## 🔗 Enterprise CRM Integration
 
-MoneyPulse offers seamless integration with NetSuite, supporting all three API approaches for maximum flexibility and reliability.
+MoneyPulse offers seamless integration with leading CRM software platforms, supporting multiple API approaches for maximum flexibility and reliability.
 
-### Supported NetSuite APIs
+### Supported Integration Methods
 
-#### 1. **REST API** (Recommended for New Implementations)
-- **Best For**: Modern integrations, easier development
-- **Authentication**: OAuth 2.0 / OAuth 1.0
+#### 1. **Modern REST APIs**
+- **Best For**: Cloud-based CRM systems, easier development
+- **Authentication**: OAuth 2.0, API Keys, Bearer tokens
 - **Use Case**: Standard customer record creation and updates
 
-#### 2. **SOAP API** (Enterprise-Grade)
-- **Best For**: Complex integrations, maximum reliability
-- **Authentication**: Email/Password or Token-based
-- **Use Case**: Full NetSuite functionality access
+#### 2. **Enterprise SOAP APIs**
+- **Best For**: Legacy CRM systems, maximum reliability
+- **Authentication**: Username/Password or Token-based
+- **Use Case**: Full CRM functionality access
 
-#### 3. **SuiteQL** (Data-Driven)
-- **Best For**: Direct database operations, complex queries
-- **Authentication**: OAuth (REST transport)
+#### 3. **Direct Database Integration**
+- **Best For**: On-premise CRM systems, complex data operations
+- **Authentication**: Database credentials or service accounts
 - **Use Case**: Advanced data manipulation and reporting
 
 ### Integration Setup
 
 #### Prerequisites
 ```bash
-pip install requests-oauthlib zeep  # Install NetSuite integration packages
+pip install requests-oauthlib zeep  # Install CRM integration packages
 ```
 
 #### Configuration Example
 ```python
-netsuite_config = {
-    'account_id': 'your-account-id',
-    'api_type': 'rest',  # 'soap', 'rest', or 'suiteql'
+crm_config = {
+    'crm_type': 'rest',  # 'soap', 'rest', or 'database'
+    'base_url': 'https://your-crm-instance.com',
+    'api_version': 'v1',
 
-    # For REST API
-    'consumer_key': 'your-consumer-key',
-    'consumer_secret': 'your-consumer-secret',
-    'token_id': 'your-token-id',
-    'token_secret': 'your-token-secret',
-
-    # For SOAP API (alternative)
-    'email': 'user@company.com',
-    'password': 'password',
-    'role_id': '3',
-    'app_id': 'MoneyPulse'
+    # Authentication options
+    'auth_type': 'oauth',  # 'oauth', 'basic', 'api_key'
+    'client_id': 'your-client-id',
+    'client_secret': 'your-client-secret',
+    'username': 'api-user@company.com',
+    'password': 'secure-password'
 }
 ```
 
 #### Usage Example
 ```python
-from src.crm_submit import NetSuiteSubmitter
+from src.crm_submit import EnterpriseCRMSubmitter
 
-# Initialize with NetSuite configuration
-submitter = NetSuiteSubmitter(
+# Initialize with CRM configuration
+submitter = EnterpriseCRMSubmitter(
     output_dir="output",
-    netsuite_config=netsuite_config
+    crm_config=crm_config
 )
 
-# Submit processed document to NetSuite
+# Submit processed document to CRM
 result = submitter.submit_document(processed_document_data)
-print(f"NetSuite Result: {result['netsuite_result']}")
+print(f"CRM Result: {result['crm_result']}")
 ```
 
 ### Data Mapping
 
-MoneyPulse automatically maps processed document data to NetSuite records:
+MoneyPulse automatically maps processed document data to CRM records:
 
 #### Customer Records
 - **Company Name**: Merchant/Business name
@@ -333,7 +329,7 @@ MoneyPulse automatically maps processed document data to NetSuite records:
 
 #### Integration Features
 - **Duplicate Detection**: Checks for existing customers before creation
-- **Data Validation**: Ensures data integrity before NetSuite submission
+- **Data Validation**: Ensures data integrity before CRM submission
 - **Error Handling**: Comprehensive logging and retry mechanisms
 - **Batch Processing**: Submit multiple documents simultaneously
 
@@ -341,9 +337,9 @@ MoneyPulse automatically maps processed document data to NetSuite records:
 
 #### Enterprise Security
 - **Encrypted Communication**: All API calls use HTTPS/TLS
-- **Secure Authentication**: OAuth tokens with proper scope limitations
+- **Secure Authentication**: Multiple authentication methods supported
 - **Data Privacy**: No sensitive data stored locally
-- **Audit Trail**: Complete logging of all NetSuite operations
+- **Audit Trail**: Complete logging of all CRM operations
 
 #### Compliance Features
 - **GDPR Compliance**: Data processing transparency

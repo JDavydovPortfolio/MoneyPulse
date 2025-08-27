@@ -233,41 +233,35 @@ class CRMSubmitter:
         return stats
 
 
-class NetSuiteConnector:
-    """NetSuite integration connector supporting SOAP, REST, and SuiteQL."""
+class EnterpriseCRMConnector:
+    """Enterprise CRM integration connector supporting SOAP, REST, and direct database access."""
 
     def __init__(self, config: Dict):
         """
-        Initialize NetSuite connector.
+        Initialize enterprise CRM connector.
 
         Args:
             config: Dictionary containing:
-                - account_id: NetSuite account ID
-                - consumer_key: OAuth consumer key (for REST)
-                - consumer_secret: OAuth consumer secret (for REST)
-                - token_id: OAuth token ID (for REST)
-                - token_secret: OAuth token secret (for REST)
-                - email: NetSuite user email (for SOAP)
-                - password: NetSuite user password (for SOAP)
-                - role_id: NetSuite role ID (for SOAP)
-                - app_id: Application ID (for SOAP)
-                - api_type: 'soap', 'rest', or 'suiteql'
+                - crm_type: 'soap', 'rest', or 'database'
+                - base_url: Base URL for the CRM system
+                - auth_type: Authentication method ('oauth', 'basic', 'api_key')
+                - Various authentication parameters depending on auth_type
         """
         self.config = config
-        self.api_type = config.get('api_type', 'rest').lower()
+        self.crm_type = config.get('crm_type', 'rest').lower()
         self.logger = logging.getLogger(__name__)
 
-        # Base URLs
-        self.rest_base_url = f"https://{config['account_id']}.suitetalk.api.netsuite.com/services/rest"
-        self.soap_base_url = f"https://{config['account_id']}.suitetalk.api.netsuite.com/services/NetSuitePort_2023_1"
+        # Base URL and authentication setup
+        self.base_url = config.get('base_url', '').rstrip('/')
+        self.auth_type = config.get('auth_type', 'oauth')
 
         # Initialize appropriate client
-        if self.api_type == 'soap':
+        if self.crm_type == 'soap':
             self._init_soap_client()
-        elif self.api_type == 'rest':
+        elif self.crm_type == 'rest':
             self._init_rest_client()
-        elif self.api_type == 'suiteql':
-            self._init_suiteql_client()
+        elif self.crm_type == 'database':
+            self._init_database_client()
 
     def _init_soap_client(self):
         """Initialize SOAP client."""
@@ -301,19 +295,29 @@ class NetSuiteConnector:
             raise ImportError("zeep package required for SOAP API. Install with: pip install zeep")
 
     def _init_rest_client(self):
-        """Initialize REST client with OAuth."""
+        """Initialize REST client with flexible authentication."""
         self.session = requests.Session()
 
-        # Set up OAuth 1.0 authentication
-        from requests_oauthlib import OAuth1
-        oauth = OAuth1(
-            self.config['consumer_key'],
-            self.config['consumer_secret'],
-            self.config['token_id'],
-            self.config['token_secret'],
-            signature_method='HMAC-SHA256'
-        )
-        self.session.auth = oauth
+        # Set up authentication based on auth_type
+        if self.auth_type == 'oauth':
+            from requests_oauthlib import OAuth1
+            oauth = OAuth1(
+                self.config.get('consumer_key'),
+                self.config.get('consumer_secret'),
+                self.config.get('token_id'),
+                self.config.get('token_secret'),
+                signature_method='HMAC-SHA256'
+            )
+            self.session.auth = oauth
+        elif self.auth_type == 'basic':
+            self.session.auth = HTTPBasicAuth(
+                self.config.get('username'),
+                self.config.get('password')
+            )
+        elif self.auth_type == 'api_key':
+            self.session.headers.update({
+                'Authorization': f"Bearer {self.config.get('api_key')}"
+            })
 
         # Set headers
         self.session.headers.update({
@@ -321,13 +325,15 @@ class NetSuiteConnector:
             'Accept': 'application/json'
         })
 
-    def _init_suiteql_client(self):
-        """Initialize SuiteQL client."""
-        self._init_rest_client()  # SuiteQL uses REST transport
+    def _init_database_client(self):
+        """Initialize database client for direct database access."""
+        # This would be implemented based on specific database requirements
+        # For now, using REST as fallback since most CRM systems use APIs
+        self._init_rest_client()
 
     def submit_financial_document(self, document_data: Dict) -> Dict:
         """
-        Submit processed financial document to NetSuite.
+        Submit processed financial document to enterprise CRM system.
 
         Args:
             document_data: Structured document data from MoneyPulse
@@ -336,37 +342,37 @@ class NetSuiteConnector:
             Dictionary with submission results
         """
         try:
-            if self.api_type == 'soap':
+            if self.crm_type == 'soap':
                 return self._submit_via_soap(document_data)
-            elif self.api_type == 'rest':
+            elif self.crm_type == 'rest':
                 return self._submit_via_rest(document_data)
-            elif self.api_type == 'suiteql':
-                return self._submit_via_suiteql(document_data)
+            elif self.crm_type == 'database':
+                return self._submit_via_database(document_data)
             else:
-                raise ValueError(f"Unsupported API type: {self.api_type}")
+                raise ValueError(f"Unsupported CRM type: {self.crm_type}")
 
         except Exception as e:
-            self.logger.error(f"NetSuite submission failed: {str(e)}")
+            self.logger.error(f"CRM submission failed: {str(e)}")
             return {
                 "status": "failed",
                 "error": str(e),
-                "api_type": self.api_type,
+                "crm_type": self.crm_type,
                 "timestamp": datetime.now().isoformat()
             }
 
     def _submit_via_soap(self, document_data: Dict) -> Dict:
-        """Submit document via NetSuite SOAP API."""
+        """Submit document via enterprise CRM SOAP API."""
         try:
-            # Create customer record (example - adapt based on your needs)
+            # Create customer record (adapt based on your CRM system's SOAP structure)
             customer_data = self._map_to_customer_record(document_data)
 
-            # Call NetSuite SOAP API
+            # Call CRM SOAP API
             response = self.soap_client.service.add(customer_data)
 
             return {
                 "status": "success",
-                "api_type": "soap",
-                "netsuite_id": response.baseRef.internalId,
+                "crm_type": "soap",
+                "record_id": getattr(response, 'id', getattr(response, 'internalId', 'unknown')),
                 "record_type": "customer",
                 "timestamp": datetime.now().isoformat()
             }
@@ -374,34 +380,35 @@ class NetSuiteConnector:
         except Exception as e:
             return {
                 "status": "failed",
-                "api_type": "soap",
+                "crm_type": "soap",
                 "error": str(e),
                 "timestamp": datetime.now().isoformat()
             }
 
     def _submit_via_rest(self, document_data: Dict) -> Dict:
-        """Submit document via NetSuite REST API."""
+        """Submit document via enterprise CRM REST API."""
         try:
             # Create customer record
             customer_data = self._map_to_customer_record(document_data)
 
-            # POST to NetSuite REST API
-            url = urljoin(self.rest_base_url, "/record/v1/customer")
+            # POST to CRM REST API
+            endpoint = self.config.get('customer_endpoint', '/customers')
+            url = urljoin(self.base_url + '/', endpoint.lstrip('/'))
             response = self.session.post(url, json=customer_data)
 
             if response.status_code in [200, 201]:
                 result = response.json()
                 return {
                     "status": "success",
-                    "api_type": "rest",
-                    "netsuite_id": result.get('id'),
+                    "crm_type": "rest",
+                    "record_id": result.get('id', result.get('customer_id', result.get('internal_id'))),
                     "record_type": "customer",
                     "timestamp": datetime.now().isoformat()
                 }
             else:
                 return {
                     "status": "failed",
-                    "api_type": "rest",
+                    "crm_type": "rest",
                     "error": f"HTTP {response.status_code}: {response.text}",
                     "timestamp": datetime.now().isoformat()
                 }
@@ -409,20 +416,22 @@ class NetSuiteConnector:
         except Exception as e:
             return {
                 "status": "failed",
-                "api_type": "rest",
+                "crm_type": "rest",
                 "error": str(e),
                 "timestamp": datetime.now().isoformat()
             }
 
-    def _submit_via_suiteql(self, document_data: Dict) -> Dict:
-        """Submit document via SuiteQL."""
+    def _submit_via_database(self, document_data: Dict) -> Dict:
+        """Submit document via direct database access."""
         try:
-            # Example: Insert customer data using SuiteQL
+            # Example: Insert customer data using SQL
+            # This would be adapted based on your specific CRM database schema
             query = """
-            INSERT INTO Customer (
-                CompanyName, Email, Phone, Addr1, City, State, Zip
+            INSERT INTO customers (
+                company_name, email, phone, address_line1, city, state, zip_code,
+                created_at, source_system
             ) VALUES (
-                ?, ?, ?, ?, ?, ?, ?
+                ?, ?, ?, ?, ?, ?, ?, ?, ?
             )
             """
 
@@ -433,13 +442,17 @@ class NetSuiteConnector:
                 document_data.get('address', {}).get('street', ''),
                 document_data.get('address', {}).get('city', ''),
                 document_data.get('address', {}).get('state', ''),
-                document_data.get('address', {}).get('zip', '')
+                document_data.get('address', {}).get('zip', ''),
+                datetime.now().isoformat(),
+                'MoneyPulse'
             ]
 
-            url = urljoin(self.rest_base_url, "/query/v1/suiteql")
+            # Use REST endpoint for database operations (most CRM systems provide this)
+            endpoint = self.config.get('database_endpoint', '/api/database/execute')
+            url = urljoin(self.base_url + '/', endpoint.lstrip('/'))
             payload = {
-                "q": query,
-                "p": params
+                "query": query,
+                "parameters": params
             }
 
             response = self.session.post(url, json=payload)
@@ -448,14 +461,14 @@ class NetSuiteConnector:
                 result = response.json()
                 return {
                     "status": "success",
-                    "api_type": "suiteql",
-                    "inserted_rows": result.get('rows_affected', 0),
+                    "crm_type": "database",
+                    "affected_rows": result.get('rows_affected', 1),
                     "timestamp": datetime.now().isoformat()
                 }
             else:
                 return {
                     "status": "failed",
-                    "api_type": "suiteql",
+                    "crm_type": "database",
                     "error": f"HTTP {response.status_code}: {response.text}",
                     "timestamp": datetime.now().isoformat()
                 }
@@ -463,19 +476,19 @@ class NetSuiteConnector:
         except Exception as e:
             return {
                 "status": "failed",
-                "api_type": "suiteql",
+                "crm_type": "database",
                 "error": str(e),
                 "timestamp": datetime.now().isoformat()
             }
 
     def _map_to_customer_record(self, document_data: Dict) -> Dict:
-        """Map MoneyPulse document data to NetSuite customer record."""
+        """Map MoneyPulse document data to enterprise CRM customer record."""
         merchant_info = document_data.get('merchant_information', {})
         contact_info = document_data.get('contact_information', {})
         address_info = document_data.get('address', {})
 
         # SOAP format
-        if self.api_type == 'soap':
+        if self.crm_type == 'soap':
             return {
                 'name': merchant_info.get('name', ''),
                 'email': contact_info.get('email', ''),
@@ -493,7 +506,7 @@ class NetSuiteConnector:
                 'isPerson': False
             }
 
-        # REST format
+        # REST/Database format
         else:
             return {
                 'companyname': merchant_info.get('name', ''),
@@ -511,26 +524,34 @@ class NetSuiteConnector:
             }
 
     def query_customer_data(self, customer_id: str) -> Dict:
-        """Query existing customer data using SuiteQL."""
-        if self.api_type != 'suiteql':
-            raise ValueError("SuiteQL required for customer queries")
+        """Query existing customer data using CRM query capabilities."""
+        if self.crm_type not in ['rest', 'database']:
+            raise ValueError("REST or Database connection required for customer queries")
 
         try:
-            query = f"""
-            SELECT
-                CompanyName, Email, Phone,
-                Addr1, City, State, Zip
-            FROM
-                Customer
-            WHERE
-                InternalId = ?
-            """
+            # Generic query format - adapt based on your CRM system's query syntax
+            if self.crm_type == 'database':
+                query = f"""
+                SELECT
+                    company_name, email, phone,
+                    address_line1, city, state, zip_code
+                FROM
+                    customers
+                WHERE
+                    id = ?
+                """
+                payload = {
+                    "query": query,
+                    "parameters": [customer_id]
+                }
+            else:  # REST API
+                payload = {
+                    "customer_id": customer_id,
+                    "fields": ["company_name", "email", "phone", "address"]
+                }
 
-            url = urljoin(self.rest_base_url, "/query/v1/suiteql")
-            payload = {
-                "q": query,
-                "p": [customer_id]
-            }
+            endpoint = self.config.get('query_endpoint', '/customers/search')
+            url = urljoin(self.base_url + '/', endpoint.lstrip('/'))
 
             response = self.session.post(url, json=payload)
 
@@ -555,44 +576,44 @@ class NetSuiteConnector:
             }
 
 
-class NetSuiteSubmitter(CRMSubmitter):
-    """Extended CRM submitter with NetSuite integration."""
+class EnterpriseCRMSubmitter(CRMSubmitter):
+    """Extended CRM submitter with enterprise CRM integration."""
 
-    def __init__(self, output_dir: str = "output", netsuite_config: Optional[Dict] = None):
+    def __init__(self, output_dir: str = "output", crm_config: Optional[Dict] = None):
         super().__init__(output_dir)
-        self.netsuite_config = netsuite_config
-        self.netsuite_connector = None
+        self.crm_config = crm_config
+        self.crm_connector = None
 
-        if netsuite_config:
+        if crm_config:
             try:
-                self.netsuite_connector = NetSuiteConnector(netsuite_config)
-                self.logger.info("NetSuite connector initialized successfully")
+                self.crm_connector = EnterpriseCRMConnector(crm_config)
+                self.logger.info("Enterprise CRM connector initialized successfully")
             except Exception as e:
-                self.logger.error(f"Failed to initialize NetSuite connector: {str(e)}")
+                self.logger.error(f"Failed to initialize CRM connector: {str(e)}")
 
     def submit_document(self, parsed_data: Dict) -> Dict:
-        """Submit document to both CRM and NetSuite if configured."""
+        """Submit document to both local CRM and enterprise CRM if configured."""
         # First do the standard CRM submission
         crm_result = super().submit_document(parsed_data)
 
-        # Then submit to NetSuite if configured
-        netsuite_result = None
-        if self.netsuite_connector:
+        # Then submit to enterprise CRM if configured
+        enterprise_crm_result = None
+        if self.crm_connector:
             try:
-                netsuite_result = self.netsuite_connector.submit_financial_document(
+                enterprise_crm_result = self.crm_connector.submit_financial_document(
                     parsed_data
                 )
-                self.logger.info(f"NetSuite submission result: {netsuite_result}")
+                self.logger.info(f"Enterprise CRM submission result: {enterprise_crm_result}")
             except Exception as e:
-                netsuite_result = {
+                enterprise_crm_result = {
                     "status": "failed",
                     "error": str(e),
                     "timestamp": datetime.now().isoformat()
                 }
-                self.logger.error(f"NetSuite submission failed: {str(e)}")
+                self.logger.error(f"Enterprise CRM submission failed: {str(e)}")
 
         return {
-            "crm_result": crm_result,
-            "netsuite_result": netsuite_result,
-            "integrated_submission": self.netsuite_connector is not None
+            "local_crm_result": crm_result,
+            "enterprise_crm_result": enterprise_crm_result,
+            "integrated_submission": self.crm_connector is not None
         }
