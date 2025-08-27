@@ -1,0 +1,19 @@
+# Minimal requirements for basic OCR functionality
+# This creates a ~50-100 MB executable instead of 2.5 GB
+
+# Core document processing
+pytesseract>=0.3.10
+pdf2image>=1.16.3
+Pillow>=10.1.0
+requests>=2.31.0
+
+# Basic GUI (much lighter than PySide6)
+tkinter  # Built into Python, no extra size
+
+# Basic utilities
+python-dotenv>=1.0.0
+pyinstaller>=6.0.0
+colorama>=0.4.6
+
+# Optional: Pandas for CSV (if you need it)
+# pandas>=2.1.0

@@ -1,1 +1,5 @@
-# Empty __init__.py file to make src a Python package 
+"""
+Merchant Document Processing Pipeline
+Core package initialization
+"""
+

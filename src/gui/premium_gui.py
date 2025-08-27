@@ -12,7 +12,7 @@ import qtawesome as qta
 import qdarkstyle
 
 # Import processing modules
-from ..pipeline import DocumentPipeline
+from src.pipeline import DocumentPipeline
 
 class DocumentProcessorWorker(QThread):
     """Worker thread for document processing to keep UI responsive."""
@@ -32,15 +32,9 @@ class DocumentProcessorWorker(QThread):
         """Process documents in background thread."""
         try:
             for i, file_path in enumerate(self.files):
-                filename = os.path.basename(file_path)
+                self.progress_updated.emit(i, len(self.files), f"Processing {os.path.basename(file_path)}")
                 
-                # Progress callback for more granular updates
-                def progress_callback(step, message):
-                    self.progress_updated.emit(i, len(self.files), f"{filename}: {message}")
-                
-                self.progress_updated.emit(i, len(self.files), f"Starting {filename}")
-                
-                result = self.pipeline.process_single_document(file_path, progress_callback)
+                result = self.pipeline.process_single_document(file_path)
                 self.processed_documents.append(result)
                 self.document_processed.emit(result)
                 

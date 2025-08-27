@@ -1,304 +1,218 @@
-import requests
-import json
+#!/usr/bin/env python3
+"""
+LLM Integration Module
+Handles document parsing using local LLMs via transformers
+"""
+
 import logging
-from typing import Dict, List, Optional
-from datetime import datetime
+import re
+from pathlib import Path
+from typing import Dict, Any, List
+import torch
+from transformers import pipeline
+
+logger = logging.getLogger(__name__)
 
 class LLMParser:
-    """Handles document classification and field extraction using local LLM.
+    import torch
+    from transformers import pipeline
+    
+    class LLMParser:
+        def __init__(self, model_name: str = "microsoft/phi-2", ollama_host: str = "http://localhost:11434", model: str = None):
+            try:
+                if model and not model_name:
+                    model_name = model
+                    
+                self.model = model_name
+                self.ollama_host = ollama_host
+                
+                if ollama_host and model_name in ["llama", "phi", "mistral"]:
+                    logger.info(f"Using Ollama model {model_name} at {ollama_host}")
+                    # For Ollama models, we would configure differently
+                    # This is a placeholder for Ollama integration
+                
+                self.generator = pipeline(
+                    "text-generation",
+                    model=model_name,
+                    device="cuda" if torch.cuda.is_available() else "cpu"
+                )
+                logger.info(f"Initialized LLM with model: {model_name}")
+            except Exception as e:
+                logger.error(f"Failed to initialize LLM: {e}")
+                raise
 
-    Supports providers:
-    - ollama (http://localhost:11434)
-    - lmstudio (OpenAI-compatible, http://localhost:1234)
-    - auto (try ollama first, then lmstudio)
-    """
-    
-    def __init__(
-        self,
-        ollama_host: str = "http://localhost:11434",
-        model: str = "phi",
-        provider: str = "auto",
-        lmstudio_host: str = "http://localhost:1234",
-        api_key: str = None
-    ):
-        """Initialize LLM parser with provider configuration."""
-        self.ollama_host = ollama_host
-        self.lmstudio_host = lmstudio_host
-        self.model = model
-        self.provider = provider.lower() if provider else "auto"
-        self.api_key = api_key or "sk-no-key-required"
-        self.logger = logging.getLogger(__name__)
-    
-    def parse_document(self, text: str, filename: str) -> Dict:
-        """Parse document text and extract structured data."""
+    def parse_document(self, text: str, filename: str = None) -> Dict[str, Any]:
+        """
+        Parse document text to extract structured information.
+
+        Args:
+            text: OCR-extracted text from document
+            filename: Optional source filename for logging and context
+
+        Returns:
+            Dictionary containing extracted fields
+        """
         try:
-            prompt = self._build_parsing_prompt(text)
-            response = self._query_llm(prompt)
-            
-            # Try to extract JSON from response
-            json_text = self._extract_json_from_response(response)
-            parsed_data = json.loads(json_text)
-            
-            # Add metadata
-            parsed_data['source_file'] = filename
-            parsed_data['processing_timestamp'] = self._get_timestamp()
-            parsed_data['extracted_text'] = text[:1000] + "..." if len(text) > 1000 else text
-            
-            return parsed_data
-            
-        except Exception as e:
-            self.logger.error(f"LLM parsing failed for {filename}: {str(e)}")
-            return self._create_error_response(filename, str(e), text)
-    
-    def _build_parsing_prompt(self, text: str) -> str:
-        """Build optimized prompt for faster document parsing."""
-        # Truncate text if too long to speed up processing
-        max_text_length = 2000
-        if len(text) > max_text_length:
-            text = text[:max_text_length] + "..."
-            
-        return f"""Extract business information from this document as JSON. Look carefully for company names, business names, DBA names, and personal names.
+            # Split text into manageable chunks
+            chunks = self._chunk_text(text)
 
-{text}
-
-Return ONLY valid JSON:
-{{
-    "document_type": "merchant_application|w9|voided_check|bank_statement|other",
-    "merchant_name": "COMPANY NAME or BUSINESS NAME or DBA or PERSON NAME",
-    "ein_or_ssn": "9-digit number only",
-    "submission_date": "YYYY-MM-DD format",
-    "requested_amount": "number only",
-    "address": {{"street": "full street address", "city": "city name", "state": "2-letter state", "zip": "5-digit ZIP"}},
-    "contact_info": {{"phone": "10-digit phone", "email": "email@domain.com"}},
-    "business_info": {{"business_type": "type of business", "years_in_business": "number", "annual_revenue": "dollar amount"}},
-    "flagged_issues": ["list any missing or invalid data"],
-    "confidence_score": 0.8
-}}
-
-CRITICAL: Look for business/company names in headers, signatures, "DBA", "Doing Business As", contact sections, and anywhere a name appears. Extract the most prominent business or person name."""
-    
-    def _query_ollama(self, prompt: str) -> str:
-        """Send prompt to Ollama and return response."""
-        try:
-            payload = {
-                "model": self.model,
-                "prompt": prompt,
-                "stream": False,
-                "options": {
-                    "temperature": 0.1,
-                    "top_p": 0.9,
-                    "num_predict": 500,  # Reduced for faster response
-                    "top_k": 40,
-                    "repeat_penalty": 1.1
-                }
+            # Initialize structured data with the expected structure for validator and CRM
+            structured_data = {
+                "merchant_name": "",
+                "ein_or_ssn": "",  # Changed from tax_id to match validator expectations
+                "document_type": "application",  # Default document type
+                "address": {  # Nested structure for address
+                    "street": "",
+                    "city": "",
+                    "state": "",
+                    "zip": ""
+                },
+                "contact_info": {  # Nested structure for contact info
+                    "phone": "",
+                    "email": ""
+                },
+                "business_info": {  # Nested structure for business info
+                    "business_type": "",
+                    "annual_revenue": "",
+                    "years_in_business": "",
+                    "processing_volume": ""
+                },
+                "requested_amount": "",
+                "source_file": filename if filename else "unknown",
+                "confidence_score": 0.7,  # Default confidence score
+                "flagged_issues": []  # Initialize empty issues list
             }
-            
-            response = requests.post(
-                f"{self.ollama_host}/api/generate",
-                json=payload,
-                timeout=30  # Reduced from 120s
-            )
-            
-            if response.status_code != 200:
-                raise Exception(f"Ollama API error: {response.status_code} - {response.text}")
-            
-            return response.json()["response"]
-            
-        except requests.exceptions.ConnectionError:
-            raise Exception("Cannot connect to Ollama. Please ensure 'ollama serve' is running.")
-        except requests.exceptions.Timeout:
-            raise Exception("Ollama request timed out (30s). Try with a smaller/faster model.")
-        except Exception as e:
-            raise Exception(f"Ollama query failed: {str(e)}")
 
-    def _query_lmstudio(self, prompt: str) -> str:
-        """Send prompt to LM Studio (OpenAI-compatible) and return response."""
-        try:
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {self.api_key}"
-            }
-            payload = {
-                "model": self.model,
-                "messages": [
-                    {"role": "system", "content": "Extract document data as JSON only."},
-                    {"role": "user", "content": prompt}
-                ],
-                "temperature": 0.1,
-                "top_p": 0.9,
-                "max_tokens": 500,  # Limit response length
-                "stream": False
-            }
-            response = requests.post(
-                f"{self.lmstudio_host}/v1/chat/completions",
-                headers=headers,
-                json=payload,
-                timeout=30  # Reduced from 120s
-            )
-            if response.status_code != 200:
-                raise Exception(f"LM Studio API error: {response.status_code} - {response.text}")
-            data = response.json()
-            content = data.get("choices", [{}])[0].get("message", {}).get("content")
-            if not content:
-                raise Exception("LM Studio returned empty response")
-            return content
-        except requests.exceptions.ConnectionError:
-            raise Exception("Cannot connect to LM Studio. Please ensure the local server is running (Server > Start Local Server).")
-        except requests.exceptions.Timeout:
-            raise Exception("LM Studio request timed out (30s). Try with a smaller/faster model.")
-        except Exception as e:
-            raise Exception(f"LM Studio query failed: {str(e)}")
-
-    def _query_llm(self, prompt: str) -> str:
-        """Route query based on provider selection or availability."""
-        if self.provider == "ollama":
-            return self._query_ollama(prompt)
-        if self.provider == "lmstudio":
-            return self._query_lmstudio(prompt)
-
-        # auto mode: smart detection - prefer LM Studio if both available (faster)
-        lm_studio_available = False
-        ollama_available = False
-        
-        # Quick check for LM Studio (prefer this)
-        try:
-            lm_response = requests.get(f"{self.lmstudio_host}/v1/models", timeout=2)
-            if lm_response.status_code == 200:
-                models = lm_response.json().get("data", [])
-                lm_studio_available = len(models) > 0
-        except Exception:
-            pass
+            # Process top-level fields with specific prompts
+            # Define which fields to process directly (not nested dictionaries)
+            direct_fields = ["merchant_name", "ein_or_ssn", "document_type", "requested_amount"]
             
-        # Quick check for Ollama
-        try:
-            ollama_response = requests.get(f"{self.ollama_host}/api/version", timeout=2)
-            ollama_available = ollama_response.status_code == 200
-        except Exception:
-            pass
-        
-        # Use LM Studio if available (faster), otherwise Ollama
-        if lm_studio_available:
-            self.logger.info("Auto-detected: Using LM Studio")
-            return self._query_lmstudio(prompt)
-        elif ollama_available:
-            self.logger.info("Auto-detected: Using Ollama")
-            return self._query_ollama(prompt)
-        else:
-            raise Exception("No LLM providers available. Please start either LM Studio or Ollama.")
-    
-    def _extract_json_from_response(self, response: str) -> str:
-        """Extract JSON object from LLM response."""
-        # Find JSON object in response
-        start = response.find('{')
-        end = response.rfind('}') + 1
-        
-        if start == -1 or end == 0:
-            raise Exception("No JSON object found in LLM response")
-        
-        json_text = response[start:end]
-        
-        # Validate it's proper JSON
-        try:
-            json.loads(json_text)
-            return json_text
-        except json.JSONDecodeError as e:
-            raise Exception(f"Invalid JSON in LLM response: {str(e)}")
-    
-    def _create_error_response(self, filename: str, error: str, text: str = "") -> Dict:
-        """Create error response structure."""
-        return {
-            "source_file": filename,
-            "document_type": "error",
-            "merchant_name": "",
-            "ein_or_ssn": "",
-            "submission_date": "",
-            "requested_amount": "",
-            "address": {
-                "street": "",
-                "city": "",
-                "state": "",
-                "zip": ""
-            },
-            "contact_info": {
-                "phone": "",
-                "email": ""
-            },
-            "business_info": {
-                "business_type": "",
-                "years_in_business": "",
-                "annual_revenue": ""
-            },
-            "error": error,
-            "flagged_issues": [f"Processing error: {error}"],
-            "confidence_score": 0.0,
-            "processing_timestamp": self._get_timestamp(),
-            "extracted_text": text[:500] + "..." if len(text) > 500 else text
-        }
-    
-    def _get_timestamp(self) -> str:
-        """Get current timestamp in ISO format."""
-        return datetime.now().isoformat()
-    
-    def test_connection(self) -> Dict[str, str]:
-        """Test connection to configured LLM provider(s) and return status info."""
-        result = {"status": False, "provider": "none", "model": "none", "details": ""}
-        
-        if self.provider == "ollama":
-            return self._test_ollama_connection()
-        elif self.provider == "lmstudio":
-            return self._test_lmstudio_connection()
-        else:  # auto mode
-            # Use same logic as _query_llm - prefer LM Studio
-            lm_result = self._test_lmstudio_connection()
-            if lm_result["status"]:
-                lm_result["details"] = f"Auto-detected: {lm_result['details']}"
-                return lm_result
-            
-            ollama_result = self._test_ollama_connection()
-            if ollama_result["status"]:
-                ollama_result["details"] = f"Auto-detected: {ollama_result['details']}"
-                return ollama_result
-            
-            result["details"] = "No LLM providers available (tried LM Studio and Ollama)"
-            return result
-
-    def _test_ollama_connection(self) -> Dict[str, str]:
-        """Test Ollama connection specifically."""
-        try:
-            r = requests.get(f"{self.ollama_host}/api/version", timeout=5)
-            if r.status_code == 200:
-                models_r = requests.get(f"{self.ollama_host}/api/tags", timeout=5)
-                if models_r.status_code == 200:
-                    models = models_r.json().get("models", [])
-                    if models:
-                        actual_model = models[0].get("name", self.model)
-                        return {
-                            "status": True,
-                            "provider": "ollama", 
-                            "model": actual_model,
-                            "details": f"Ollama server running with {len(models)} models"
-                        }
-        except Exception as e:
-            pass
-        return {"status": False, "provider": "none", "model": "none", "details": "Ollama not available"}
-
-    def _test_lmstudio_connection(self) -> Dict[str, str]:
-        """Test LM Studio connection specifically."""
-        try:
-            r = requests.get(f"{self.lmstudio_host}/v1/models", timeout=5)
-            if r.status_code == 200:
-                models_data = r.json()
-                models = models_data.get("data", [])
-                if models:
-                    actual_model = models[0].get("id", self.model)
-                    return {
-                        "status": True,
-                        "provider": "lmstudio",
-                        "model": actual_model,
-                        "details": f"LM Studio server running with {len(models)} models"
-                    }
+            # Process direct fields
+            for field in direct_fields:
+                prompt = self._get_field_prompt(field, chunks[0])  # Use first chunk for basic info
+                response = self.generator(prompt, max_length=100, num_return_sequences=1)
+                # Handle different response formats from transformers pipeline
+                if isinstance(response, list) and len(response) > 0:
+                    if isinstance(response[0], dict) and 'generated_text' in response[0]:
+                        structured_data[field] = self._clean_response(response[0]['generated_text'])
+                    else:
+                        structured_data[field] = self._clean_response(str(response[0]))
                 else:
-                    return {"status": False, "provider": "none", "model": "none", "details": "LM Studio running but no models loaded"}
+                    structured_data[field] = ""
+            
+            # Process address fields
+            address_fields = ["street", "city", "state", "zip"]
+            for field in address_fields:
+                prompt = self._get_field_prompt(f"address_{field}", chunks[0])
+                response = self.generator(prompt, max_length=100, num_return_sequences=1)
+                if isinstance(response, list) and len(response) > 0:
+                    if isinstance(response[0], dict) and 'generated_text' in response[0]:
+                        structured_data["address"][field] = self._clean_response(response[0]['generated_text'])
+                    else:
+                        structured_data["address"][field] = self._clean_response(str(response[0]))
+            
+            # Process contact fields
+            contact_fields = ["phone", "email"]
+            for field in contact_fields:
+                prompt = self._get_field_prompt(f"contact_{field}", chunks[0])
+                response = self.generator(prompt, max_length=100, num_return_sequences=1)
+                if isinstance(response, list) and len(response) > 0:
+                    if isinstance(response[0], dict) and 'generated_text' in response[0]:
+                        structured_data["contact_info"][field] = self._clean_response(response[0]['generated_text'])
+                    else:
+                        structured_data["contact_info"][field] = self._clean_response(str(response[0]))
+            
+            # Process business info fields
+            business_fields = ["business_type", "annual_revenue", "years_in_business", "processing_volume"]
+            for field in business_fields:
+                prompt = self._get_field_prompt(field, chunks[0])
+                response = self.generator(prompt, max_length=100, num_return_sequences=1)
+                if isinstance(response, list) and len(response) > 0:
+                    if isinstance(response[0], dict) and 'generated_text' in response[0]:
+                        structured_data["business_info"][field] = self._clean_response(response[0]['generated_text'])
+                    else:
+                        structured_data["business_info"][field] = self._clean_response(str(response[0]))
+
+            logger.info("Successfully parsed document")
+            return structured_data
+
         except Exception as e:
-            pass
-        return {"status": False, "provider": "none", "model": "none", "details": "LM Studio not available"}
+            logger.error(f"Error parsing document: {e}")
+            raise
+
+    def _chunk_text(self, text: str, max_length: int = 512) -> List[str]:
+        """Split text into manageable chunks."""
+        # Use simple paragraph-based splitting
+        paragraphs = text.split('\n\n')
+        chunks = []
+        current_chunk = []
+        current_length = 0
+
+        for para in paragraphs:
+            para_length = len(para.split())
+            if current_length + para_length > max_length:
+                chunks.append(' '.join(current_chunk))
+                current_chunk = [para]
+                current_length = para_length
+            else:
+                current_chunk.append(para)
+                current_length += para_length
+
+        if current_chunk:
+            chunks.append(' '.join(current_chunk))
+
+        return chunks
+
+    def _get_field_prompt(self, field: str, text: str) -> str:
+        """Generate appropriate prompt for each field."""
+        prompts = {
+            # Direct fields
+            "merchant_name": f"Extract the merchant or business name from this text: {text}",
+            "ein_or_ssn": f"Find the tax ID, EIN number, or SSN from this text: {text}",
+            "document_type": f"What type of document is this (application, statement, invoice, etc.): {text}",
+            "requested_amount": f"Extract the requested loan or funding amount from this text: {text}",
+            
+            # Address fields
+            "address_street": f"Extract only the street address (no city/state/zip) from this text: {text}",
+            "address_city": f"Extract only the city name from this address information: {text}",
+            "address_state": f"Extract only the state (2-letter abbreviation preferred) from this address: {text}",
+            "address_zip": f"Extract only the ZIP code from this address: {text}",
+            
+            # Contact fields
+            "contact_phone": f"Find the phone number from this text: {text}",
+            "contact_email": f"Find the email address from this text: {text}",
+            
+            # Business info fields
+            "business_type": f"What type of business is described in this text: {text}",
+            "annual_revenue": f"Extract the annual revenue amount from this text: {text}",
+            "years_in_business": f"How many years has this business been operating according to the text: {text}",
+            "processing_volume": f"Find the credit card processing volume from this text: {text}"
+        }
+        return prompts.get(field, f"Extract the {field.replace('_', ' ')} from this text: {text}")
+
+    def _clean_response(self, text: str) -> str:
+        """Clean up model response to extract relevant information."""
+        # Remove the original prompt if present
+        if ":" in text:
+            text = text.split(":")[-1]
+
+        # Clean up whitespace and special characters
+        text = text.strip()
+        text = re.sub(r'\s+', ' ', text)
+
+        return text
+        
+    def test_connection(self) -> bool:
+        """Test if the LLM is properly initialized and working."""
+        try:
+            # Try a simple generation to test the model
+            test_prompt = "Hello, this is a test."
+            response = self.generator(test_prompt, max_length=20, num_return_sequences=1)
+            
+            # If we get here without an exception, the model is working
+            logger.info(f"LLM connection test successful")
+            return True
+            
+        except Exception as e:
+            logger.error(f"LLM connection test failed: {e}")
+            return False

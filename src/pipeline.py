@@ -21,10 +21,7 @@ class DocumentPipeline:
         self.ocr = OCRProcessor(tesseract_path=self.config.get('tesseract_path'))
         self.llm = LLMParser(
             ollama_host=self.config.get('ollama_host', 'http://localhost:11434'),
-            model=self.config.get('model', 'phi'),
-            provider=self.config.get('provider', 'auto'),  # Auto-detect available provider
-            lmstudio_host=self.config.get('lmstudio_host', 'http://localhost:1234'),
-            api_key=self.config.get('api_key')
+            model=self.config.get('model', 'phi')
         )
         self.validator = DocumentValidator()
         self.crm = CRMSubmitter(output_dir)
@@ -82,7 +79,7 @@ class DocumentPipeline:
         
         return processed_documents
     
-    def process_single_document(self, file_path: str, progress_callback=None) -> Dict:
+    def process_single_document(self, file_path: str) -> Dict:
         """Process a single document through the complete pipeline."""
         filename = os.path.basename(file_path)
         start_time = datetime.now()
@@ -91,8 +88,6 @@ class DocumentPipeline:
         
         try:
             # Step 1: OCR Processing
-            if progress_callback:
-                progress_callback(1, "Extracting text (OCR)")
             self.logger.debug(f"Step 1: OCR extraction for {filename}")
             extracted_text = self.ocr.extract_text(file_path)
             
@@ -100,20 +95,14 @@ class DocumentPipeline:
                 raise Exception("No text could be extracted from document")
             
             # Step 2: LLM Parsing
-            if progress_callback:
-                progress_callback(2, "AI parsing")
             self.logger.debug(f"Step 2: LLM parsing for {filename}")
             parsed_data = self.llm.parse_document(extracted_text, filename)
             
             # Step 3: Validation
-            if progress_callback:
-                progress_callback(3, "Validating data")
             self.logger.debug(f"Step 3: Validation for {filename}")
             validated_data = self.validator.validate_document(parsed_data)
             
             # Step 4: CRM Submission Preparation
-            if progress_callback:
-                progress_callback(4, "Preparing submission")
             self.logger.debug(f"Step 4: CRM submission for {filename}")
             submission_result = self.crm.submit_document(validated_data)
             
@@ -159,14 +148,10 @@ class DocumentPipeline:
         
         # Test LLM
         try:
-            llm_status = self.llm.test_connection()
-            if llm_status["status"]:
-                results["llm"] = {
-                    "status": "ok", 
-                    "details": f"LLM connection successful - {llm_status['provider']} ({llm_status['model']})"
-                }
+            if self.llm.test_connection():
+                results["llm"] = {"status": "ok", "details": f"LLM connection successful ({self.llm.model})"}
             else:
-                results["llm"] = {"status": "error", "details": llm_status["details"]}
+                results["llm"] = {"status": "error", "details": "Cannot connect to LLM service"}
         except Exception as e:
             results["llm"] = {"status": "error", "details": f"LLM error: {str(e)}"}
         
@@ -249,11 +234,8 @@ class DocumentPipeline:
         if 'tesseract_path' in new_config:
             self.ocr = OCRProcessor(tesseract_path=new_config['tesseract_path'])
         
-        if any(k in new_config for k in ['ollama_host', 'lmstudio_host', 'model', 'provider', 'api_key']):
+        if 'ollama_host' in new_config or 'model' in new_config:
             self.llm = LLMParser(
                 ollama_host=self.config.get('ollama_host', 'http://localhost:11434'),
-                model=self.config.get('model', 'phi'),
-                provider=self.config.get('provider', 'auto'),  # Auto-detect available provider
-                lmstudio_host=self.config.get('lmstudio_host', 'http://localhost:1234'),
-                api_key=self.config.get('api_key')
+                model=self.config.get('model', 'phi')
             )

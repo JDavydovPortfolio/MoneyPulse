@@ -1,18 +1,27 @@
 {
 	"version": "0.2.0",
 	"configurations": [
+		
+		
 		{
-			"type": "chrome",
+			"name": "Python Debugger: Current File",
+			"type": "debugpy",
 			"request": "launch",
-			"name": "Debug in Chrome",
-			"url": "https://localhost:undefined",
+			"program": "${file}",
+			"console": "integratedTerminal"
+		},
+		{
+			"type": "msedge",
+			"request": "launch",
+			"name": "Debug in Edge",
+			"url": "https://localhost:8080",
 			"includeLaunchArgs": true,
 			"runtimeArgs": [
 				"--args",
 				"--test-type",
 				"--user-data-dir=/tmp",
 				"--ignore-certificate-errors",
-				"--unsafely-treat-insecure-origin-as-secure=https://localhost:undefined"
+				"--unsafely-treat-insecure-origin-as-secure=https://localhost:8080"
 			],
 			"outFiles": [
 				"${workspaceFolder}/DevPublic/*.js"
@@ -23,29 +32,28 @@
 				"**/node_modules/**",
 				"**/DistPublic/**",
 				"**/WebSources/**"
-			]
+			],
+			"webRoot": "${workspaceFolder}"
 		},
 		{
-			"name": "Launch Edge",
+			"name": "Dart: Run all Tests",
+			"type": "dart",
 			"request": "launch",
-			"type": "msedge",
-			"url": "http://localhost:8080",
-			"webRoot": "${workspaceFolder}"
+			"program": "./test/"
+		}
+		{
+			"type": "node",
+			"request": "attach",
+			"name": "Containers: Attach to Node",
+			"remoteRoot": "/usr/src/app"
 		},
 		{
 			"name": "Attach to Edge",
-			"port": 9222,
-			"request": "attach",
 			"type": "msedge",
+			"request": "attach",
+			"url": "https://localhost:8080",
+			"port": 8080,
 			"webRoot": "${workspaceFolder}"
-		},
-		{
-			"name": "Python: Current File",
-			"type": "python",
-			"request": "launch",
-			"program": "${file}",
-			"console": "integratedTerminal",
-			"justMyCode": true
 		}
 	]
 }

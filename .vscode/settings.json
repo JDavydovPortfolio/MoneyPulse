@@ -1,5 +1,14 @@
 {
     "cSpell.words": [
-        "pytesseract"
-    ]
+        "colorama",
+        "dotenv",
+        "levelname",
+        "pyinstaller",
+        "pyqtgraph",
+        "pytesseract",
+        "qdarkstyle",
+        "safetensors",
+        "torchvision"
+    ],
+    "git.ignoreLimitWarning": true
 }

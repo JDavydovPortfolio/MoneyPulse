@@ -1,6 +1,26 @@
-# Merchant Document Processing Suite
+# MerchantPulse Pipeline
+
+![Python](https://img.shields.io/badge/python-3.9+-blue.svg) ![License](https://img.shields.io/badge/license-MIT-green.svg) ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg) ![Offline](https://img.shields.io/badge/processing-100%25%20Offline-brightgreen.svg)
 
 A comprehensive, offline-first document processing pipeline with premium GUI for automated merchant submission review and CRM integration.
+
+## 📑 Table of Contents
+
+- [Features](#-features)
+- [Quick Start](#-quick-start)
+- [Download](#-download)
+- [Requirements](#-requirements)
+- [Installation](#️-installation)
+- [Project Structure](#-project-structure)
+- [Usage](#-usage)
+- [Configuration](#️-configuration)
+- [Troubleshooting](#-troubleshooting)
+- [Performance Metrics](#-performance-metrics)
+- [Security & Privacy](#-security--privacy)
+- [Advanced Usage](#-advanced-usage)
+- [Business Benefits](#-business-benefits)
+- [Support](#-support)
+- [License](#-license)
 
 ## 🚀 Features
 
@@ -14,20 +34,33 @@ A comprehensive, offline-first document processing pipeline with premium GUI for
 
 ## 📋 Requirements
 
-### System Requirements
+### For EXE Users (Recommended)
+- **Operating System**: Windows 10/11 (64-bit)
+- **RAM**: 8GB minimum, 16GB recommended
+- **Storage**: 3GB free space (for the executable and processing)
+- **CPU**: Modern multi-core processor
+- **No additional software required** - everything is bundled!
+
+### For Developers (Building from Source)
 - **Operating System**: Windows 10/11 (64-bit)
 - **RAM**: 8GB minimum, 16GB recommended
 - **Storage**: 5GB free space for models and processing
 - **CPU**: Modern multi-core processor (GPU optional but recommended)
-
-### Software Dependencies
 - **Python 3.9+** with pip
 - **Tesseract OCR** for text extraction
 - **Ollama** or **LM Studio** for AI processing
 
 ## 🛠️ Installation
 
-### 1. Install Python
+> **💡 Tip**: For most users, we recommend downloading the pre-built executable from [Releases](../../releases) - no installation required!
+
+### For EXE Users (No Installation Required)
+1. Download `MerchantProcessor.exe` from [Releases](../../releases/latest)
+2. Double-click to run - that's it!
+
+### For Developers (Python Setup Required)
+
+#### 1. Install Python
 1. Download Python 3.9+ from [python.org](https://python.org)
 2. **Important**: Check "Add Python to PATH" during installation
 3. Verify installation:
@@ -37,9 +70,16 @@ A comprehensive, offline-first document processing pipeline with premium GUI for
    ```
 
 ### 2. Install Tesseract OCR
-1. Download from [GitHub Tesseract Wiki](https://github.com/UB-Mannheim/tesseract/wiki)
-2. Install to default location: `C:\Program Files\Tesseract-OCR`
-3. Verify installation:
+1. Download the Tesseract OCR installer for Windows from the [UB Mannheim repository](https://github.com/UB-Mannheim/tesseract/wiki)
+2. Run the installer and note the installation path (default is `C:\Program Files\Tesseract-OCR`)
+3. Add Tesseract to your system PATH:
+   - Open System Properties (Win + Pause/Break or search "Environment Variables")
+   - Click "Environment Variables"
+   - Under "System Variables", find and select "Path"
+   - Click "Edit" and then "New"
+   - Add the Tesseract installation path (e.g., `C:\Program Files\Tesseract-OCR`)
+   - Click "OK" on all windows
+4. Verify installation by opening a new terminal and running:
    ```bash
    tesseract --version
    ```
@@ -65,18 +105,48 @@ A comprehensive, offline-first document processing pipeline with premium GUI for
 
 ## 🏃 Quick Start
 
-### Method 1: Python Script (Development)
+### 🚀 Ready to Use (Recommended)
+1. **Download** the latest `MerchantProcessor.exe` from the [Releases](../../releases) section
+2. **Double-click** the executable to launch
+3. **Start processing** documents immediately - no installation required!
+
+### 🛠️ For Developers
 ```bash
 python main.py
 ```
 
-### Method 2: Build EXE (Production)
-```bash
-# Build the executable
-pyinstaller build-merchant.spec
+## 📥 Download
 
-# Find the EXE in dist/ folder
-./dist/MerchantProcessor.exe
+### Latest Release - Two Versions Available
+
+**🚀 MerchantProcessor-Lite.exe** - *Recommended for Most Users*
+- **Size**: ~100 MB (basic OCR + GUI)
+- **Features**: Document OCR, basic data extraction, CSV export
+- **Requirements**: Windows 10/11 (64-bit)
+- **Download**: [Latest Release](../../releases/latest)
+
+**🤖 MerchantProcessor-Full.exe** - *Advanced AI Features*
+- **Size**: ~2.5 GB (includes PyTorch AI models)
+- **Features**: Everything in Lite + advanced AI document parsing
+- **Requirements**: Windows 10/11 (64-bit), 8GB+ RAM
+- **Download**: [Latest Release](../../releases/latest)
+
+> **💡 Why two versions?** The AI libraries (PyTorch, Transformers) add 2.4 GB to the executable. Most users only need basic OCR, so we provide a lightweight version without AI.
+
+### Build from Source
+```bash
+# Clone the repository
+git clone https://github.com/YOUR_USERNAME/merchant-pipeline.git
+cd merchant-pipeline
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run from source
+python main.py
+
+# Or build your own executable
+pyinstaller build-merchant.spec
 ```
 
 ## 📁 Project Structure
@@ -102,8 +172,19 @@ merchant_pipeline/
 
 ## 💻 Usage
 
+### Example Documents
+The `input/` directory contains guidelines for supported document types. For testing, you can use your own:
+- **Merchant Applications**: Standard PDF application forms
+- **W-9 Forms**: IRS W-9 forms in PDF or scanned image format
+- **Voided Checks**: Scanned check images with "VOID" marking
+- **Bank Statements**: Recent bank statements in PDF format
+
+> Note: Sample documents will be included in future releases to help you test the system.
+
 ### GUI Application
-1. **Launch**: Run `python main.py` or double-click the EXE
+1. **Launch**: 
+   - **Easy**: Double-click `MerchantProcessor.exe` (no setup required)
+   - **Development**: Run `python main.py` 
 2. **Upload Documents**: Drag & drop files or click "Browse Files"
 3. **Process**: Click "🚀 Process Documents" and monitor progress
 4. **Review Results**: Check OCR preview, extracted data, and validation results
