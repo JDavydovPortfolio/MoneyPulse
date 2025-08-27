@@ -1,4 +1,4 @@
-# MerchantPulse Pipeline
+# 🚀 MerchantPulse - AI-Powered Document Processing
 
 ![Python](https://img.shields.io/badge/python-3.9+-blue.svg) ![License](https://img.shields.io/badge/license-MIT-green.svg) ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg) ![Offline](https://img.shields.io/badge/processing-100%25%20Offline-brightgreen.svg)
 
@@ -136,8 +136,8 @@ python main.py
 ### Build from Source
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/merchant-pipeline.git
-cd merchant-pipeline
+git clone https://github.com/JDavydovPortfolio/MerchantPulse-Pipeline.git
+cd MerchantPulse-Pipeline
 
 # Install dependencies
 pip install -r requirements.txt
