@@ -57,18 +57,26 @@ class DropArea(QLabel):
         self.setAcceptDrops(True)
         self.setAlignment(Qt.AlignCenter)
         self.setMinimumHeight(150)
-        self.setText("📄 Drag & Drop Documents Here\n\nSupported: PDF, PNG, JPG, JPEG")
+        self.setText("💼 Drag & Drop Financial Documents Here\n\nSupported: PDF, PNG, JPG, JPEG\n\n✨ AI will extract and process your data instantly")
         self.setStyleSheet("""
             QLabel {
-                border: 2px dashed #0078d4;
-                border-radius: 10px;
-                padding: 20px;
-                font-size: 14px;
-                background-color: rgba(0, 120, 212, 0.1);
-                color: #0078d4;
+                border: 2px dashed #4CAF50;
+                border-radius: 15px;
+                padding: 30px;
+                font-size: 15px;
+                font-weight: 500;
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1, 
+                    stop:0 rgba(76, 175, 80, 0.1), 
+                    stop:1 rgba(33, 150, 243, 0.1));
+                color: #4CAF50;
+                line-height: 1.6;
             }
             QLabel:hover {
-                background-color: rgba(0, 120, 212, 0.2);
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1, 
+                    stop:0 rgba(76, 175, 80, 0.2), 
+                    stop:1 rgba(33, 150, 243, 0.2));
+                transform: scale(1.02);
+                transition: all 0.3s ease;
             }
         """)
     
@@ -77,24 +85,32 @@ class DropArea(QLabel):
             event.acceptProposedAction()
             self.setStyleSheet("""
                 QLabel {
-                    border: 2px solid #0078d4;
-                    border-radius: 10px;
-                    padding: 20px;
-                    font-size: 14px;
-                    background-color: rgba(0, 120, 212, 0.3);
-                    color: #0078d4;
+                    border: 2px solid #4CAF50;
+                    border-radius: 15px;
+                    padding: 30px;
+                    font-size: 15px;
+                    font-weight: 500;
+                    background: qlineargradient(x1:0, y1:0, x2:1, y2:1, 
+                        stop:0 rgba(76, 175, 80, 0.4), 
+                        stop:1 rgba(33, 150, 243, 0.4));
+                    color: #4CAF50;
+                    line-height: 1.6;
                 }
             """)
     
     def dragLeaveEvent(self, event):
         self.setStyleSheet("""
             QLabel {
-                border: 2px dashed #0078d4;
-                border-radius: 10px;
-                padding: 20px;
-                font-size: 14px;
-                background-color: rgba(0, 120, 212, 0.1);
-                color: #0078d4;
+                border: 2px dashed #4CAF50;
+                border-radius: 15px;
+                padding: 30px;
+                font-size: 15px;
+                font-weight: 500;
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1, 
+                    stop:0 rgba(76, 175, 80, 0.1), 
+                    stop:1 rgba(33, 150, 243, 0.1));
+                color: #4CAF50;
+                line-height: 1.6;
             }
         """)
     
@@ -118,9 +134,9 @@ class PremiumDocumentProcessor(QMainWindow):
     
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Merchant Document Processing Suite")
+        self.setWindowTitle("💰 MoneyPulse - Where Finance Meets AI")
         self.setMinimumSize(1400, 900)
-        self.setWindowIcon(qta.icon('fa5s.file-invoice-dollar', color='white'))
+        self.setWindowIcon(qta.icon('fa5s.money-bill-wave', color='#4CAF50'))
         
         # Initialize variables
         self.selected_files = []
@@ -692,13 +708,94 @@ def launch_application():
     app = QApplication(sys.argv)
     app.setStyle('Fusion')
     
-    # Apply dark theme
-    app.setStyleSheet(qdarkstyle.load_stylesheet_pyside6())
+    # Apply enhanced dark theme with custom colors
+    dark_theme = qdarkstyle.load_stylesheet_pyside6()
+    
+    # Add custom enhancements for better eye comfort
+    custom_style = """
+    /* Enhanced styling for better visual comfort */
+    QMainWindow {
+        background: qlineargradient(x1:0, y1:0, x2:1, y2:1, 
+            stop:0 #1e1e1e, stop:1 #2d2d2d);
+    }
+    
+    QPushButton {
+        background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+            stop:0 #4CAF50, stop:1 #45a049);
+        border: none;
+        border-radius: 8px;
+        padding: 12px 24px;
+        font-weight: 600;
+        font-size: 14px;
+        color: white;
+    }
+    
+    QPushButton:hover {
+        background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+            stop:0 #5CBF60, stop:1 #4CAF50);
+        transform: translateY(-2px);
+    }
+    
+    QPushButton:pressed {
+        background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+            stop:0 #45a049, stop:1 #3d8b40);
+    }
+    
+    QPushButton:disabled {
+        background: #666666;
+        color: #999999;
+    }
+    
+    QGroupBox {
+        border: 2px solid #4CAF50;
+        border-radius: 12px;
+        margin: 10px;
+        padding: 15px;
+        font-weight: bold;
+        color: #4CAF50;
+    }
+    
+    QGroupBox::title {
+        subcontrol-origin: margin;
+        left: 20px;
+        padding: 0 10px 0 10px;
+        background: #2d2d2d;
+    }
+    
+    QTextEdit, QListWidget {
+        border: 1px solid #4CAF50;
+        border-radius: 8px;
+        padding: 8px;
+        background: #1a1a1a;
+        selection-background-color: #4CAF50;
+    }
+    
+    QProgressBar {
+        border: 2px solid #4CAF50;
+        border-radius: 8px;
+        text-align: center;
+        font-weight: bold;
+    }
+    
+    QProgressBar::chunk {
+        background: qlineargradient(x1:0, y1:0, x2:1, y2:0, 
+            stop:0 #4CAF50, stop:1 #2196F3);
+        border-radius: 6px;
+    }
+    
+    QStatusBar {
+        background: #1e1e1e;
+        border-top: 1px solid #4CAF50;
+        color: #4CAF50;
+    }
+    """
+    
+    app.setStyleSheet(dark_theme + custom_style)
     
     # Set application properties
-    app.setApplicationName("Merchant Document Processor")
+    app.setApplicationName("💰 MoneyPulse - Where Finance Meets AI")
     app.setApplicationVersion("1.0.0")
-    app.setOrganizationName("Document Processing Suite")
+    app.setOrganizationName("MoneyPulse Suite")
     
     # Create and show main window
     window = PremiumDocumentProcessor()
