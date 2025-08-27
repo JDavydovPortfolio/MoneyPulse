@@ -1,8 +1,8 @@
-# 🚀 MerchantPulse - AI-Powered Document Processing
+# 💰 MoneyPulse - Where Finance Meets AI
 
 ![Python](https://img.shields.io/badge/python-3.9+-blue.svg) ![License](https://img.shields.io/badge/license-MIT-green.svg) ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg) ![Offline](https://img.shields.io/badge/processing-100%25%20Offline-brightgreen.svg)
 
-A comprehensive, offline-first document processing pipeline with premium GUI for automated merchant submission review and CRM integration.
+Where finance meets artificial intelligence. A comprehensive, offline-first document processing pipeline with premium GUI for automated financial document review and CRM integration.
 
 ## 📑 Table of Contents
 
