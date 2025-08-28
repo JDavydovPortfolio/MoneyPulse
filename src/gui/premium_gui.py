@@ -114,9 +114,9 @@ class DropArea(QLabel):
         
         if files:
             self.files_dropped.emit(files)
-            self.setText(f"✅ {len(files)} file(s) selected")
+            self.setText(f"{len(files)} file(s) selected")
         else:
-            self.setText("❌ No supported files found")
+            self.setText("No supported files found")
         
         self.dragLeaveEvent(event)
 
@@ -190,7 +190,7 @@ class PremiumDocumentProcessor(QMainWindow):
         layout = QVBoxLayout(widget)
         
         # File selection group
-        file_group = QGroupBox("📁 Document Upload")
+        file_group = QGroupBox("Document Upload")
         file_layout = QVBoxLayout(file_group)
         
         # Drop area
@@ -198,13 +198,13 @@ class PremiumDocumentProcessor(QMainWindow):
         file_layout.addWidget(self.drop_area)
         
         # Browse button
-        browse_btn = QPushButton("📂 Browse Files")
+        browse_btn = QPushButton("Browse Files")
         browse_btn.setIcon(qta.icon('fa5s.folder-open', color='white'))
         browse_btn.clicked.connect(self.browse_files)
         file_layout.addWidget(browse_btn)
         
         # Clear button
-        clear_btn = QPushButton("🗑️ Clear Selection")
+        clear_btn = QPushButton("Clear Selection")
         clear_btn.setIcon(qta.icon('fa5s.trash', color='white'))
         clear_btn.clicked.connect(self.clear_selection)
         file_layout.addWidget(clear_btn)
@@ -212,18 +212,18 @@ class PremiumDocumentProcessor(QMainWindow):
         layout.addWidget(file_group)
         
         # Processing group
-        process_group = QGroupBox("⚙️ Processing")
+        process_group = QGroupBox("Processing")
         process_layout = QVBoxLayout(process_group)
         
         # Process button
-        self.process_btn = QPushButton("🚀 Process Documents")
+        self.process_btn = QPushButton("Process Documents")
         self.process_btn.setIcon(qta.icon('fa5s.play', color='white'))
         self.process_btn.setEnabled(False)
         self.process_btn.clicked.connect(self.process_documents)
         process_layout.addWidget(self.process_btn)
         
         # Stop button
-        self.stop_btn = QPushButton("⏹️ Stop Processing")
+        self.stop_btn = QPushButton("Stop Processing")
         self.stop_btn.setIcon(qta.icon('fa5s.stop', color='white'))
         self.stop_btn.setEnabled(False)
         self.stop_btn.clicked.connect(self.stop_processing)
@@ -232,18 +232,18 @@ class PremiumDocumentProcessor(QMainWindow):
         layout.addWidget(process_group)
         
         # Export group
-        export_group = QGroupBox("📤 Export")
+        export_group = QGroupBox("Export")
         export_layout = QVBoxLayout(export_group)
         
         # Export CSV button
-        self.export_csv_btn = QPushButton("📊 Export CSV Summary")
+        self.export_csv_btn = QPushButton("Export CSV Summary")
         self.export_csv_btn.setIcon(qta.icon('fa5s.file-csv', color='white'))
         self.export_csv_btn.setEnabled(False)
         self.export_csv_btn.clicked.connect(self.export_csv)
         export_layout.addWidget(self.export_csv_btn)
         
         # Open output folder button
-        self.open_folder_btn = QPushButton("📁 Open Output Folder")
+        self.open_folder_btn = QPushButton("Open Output Folder")
         self.open_folder_btn.setIcon(qta.icon('fa5s.external-link-alt', color='white'))
         self.open_folder_btn.clicked.connect(self.open_output_folder)
         export_layout.addWidget(self.open_folder_btn)
@@ -251,7 +251,7 @@ class PremiumDocumentProcessor(QMainWindow):
         layout.addWidget(export_group)
         
         # System status group
-        status_group = QGroupBox("🔧 System Status")
+        status_group = QGroupBox("System Status")
         status_layout = QVBoxLayout(status_group)
         
         self.status_text = QTextEdit()
@@ -259,7 +259,7 @@ class PremiumDocumentProcessor(QMainWindow):
         self.status_text.setReadOnly(True)
         status_layout.addWidget(self.status_text)
         
-        test_btn = QPushButton("🧪 Test System")
+        test_btn = QPushButton("Test System")
         test_btn.setIcon(qta.icon('fa5s.check-circle', color='white'))
         test_btn.clicked.connect(self.test_system_components)
         status_layout.addWidget(test_btn)
@@ -277,22 +277,22 @@ class PremiumDocumentProcessor(QMainWindow):
         self.ocr_preview = QTextEdit()
         self.ocr_preview.setReadOnly(True)
         self.ocr_preview.setPlaceholderText("OCR extracted text will appear here...")
-        self.tab_widget.addTab(self.ocr_preview, "📄 OCR Preview")
+        self.tab_widget.addTab(self.ocr_preview, "OCR Preview")
         
         # Parsed Data tab
         self.data_tree = QTreeWidget()
         self.data_tree.setHeaderLabels(["Field", "Value", "Status"])
         self.data_tree.setAlternatingRowColors(True)
-        self.tab_widget.addTab(self.data_tree, "🏢 Extracted Data")
+        self.tab_widget.addTab(self.data_tree, "Extracted Data")
         
         # Validation Results tab
         self.validation_list = QListWidget()
-        self.tab_widget.addTab(self.validation_list, "✅ Validation Results")
+        self.tab_widget.addTab(self.validation_list, "Validation Results")
         
         # Processing Log tab
         self.log_text = QTextEdit()
         self.log_text.setReadOnly(True)
-        self.tab_widget.addTab(self.log_text, "📋 Processing Log")
+        self.tab_widget.addTab(self.log_text, "Processing Log")
         
         return self.tab_widget
     
@@ -349,7 +349,7 @@ class PremiumDocumentProcessor(QMainWindow):
         """Handle file selection."""
         self.selected_files = files
         self.process_btn.setEnabled(True)
-        self.drop_area.setText(f"✅ {len(files)} file(s) selected")
+        self.drop_area.setText(f"{len(files)} file(s) selected")
         
         # Clear previous results
         self.clear_results()
@@ -424,12 +424,12 @@ class PremiumDocumentProcessor(QMainWindow):
         status = result.get('processing_status', 'unknown')
         
         if status == 'completed':
-            self.log_message(f"✅ Completed: {filename}")
+            self.log_message(f"Completed: {filename}")
             # Update UI with latest result
             self.update_results_display(result)
         else:
             error = result.get('error', 'Unknown error')
-            self.log_message(f"❌ Failed: {filename} - {error}")
+            self.log_message(f"Failed: {filename} - {error}")
     
     def processing_completed(self, processed_documents: List[Dict]):
         """Handle completion of all document processing."""
@@ -453,8 +453,8 @@ class PremiumDocumentProcessor(QMainWindow):
             self,
             "Processing Complete",
             f"Processed {len(processed_documents)} documents\n\n"
-            f"✅ Successful: {successful}\n"
-            f"❌ Failed: {failed}\n\n"
+            f"Successful: {successful}\n"
+            f"Failed: {failed}\n\n"
             f"Results saved to output folder."
         )
     
@@ -465,7 +465,7 @@ class PremiumDocumentProcessor(QMainWindow):
         self.progress_bar.setVisible(False)
         
         self.status_bar.showMessage("Processing failed")
-        self.log_message(f"❌ Processing error: {error_message}")
+        self.log_message(f"Processing error: {error_message}")
         
         QMessageBox.critical(self, "Processing Error", f"Processing failed:\n{error_message}")
     
@@ -483,11 +483,11 @@ class PremiumDocumentProcessor(QMainWindow):
         self.data_tree.addTopLevelItem(merchant_item)
         
         merchant_name = result.get('merchant_name', '')
-        name_item = QTreeWidgetItem(["Name", merchant_name, "✓" if merchant_name else "❌"])
+        name_item = QTreeWidgetItem(["Name", merchant_name, "Valid" if merchant_name else "Invalid"])
         merchant_item.addChild(name_item)
         
         ein_ssn = result.get('ein_or_ssn', '')
-        ein_item = QTreeWidgetItem(["EIN/SSN", ein_ssn, "✓" if len(ein_ssn.replace('-', '')) == 9 else "❌"])
+        ein_item = QTreeWidgetItem(["EIN/SSN", ein_ssn, "Valid" if len(ein_ssn.replace('-', '')) == 9 else "Invalid"])
         merchant_item.addChild(ein_item)
         
         # Add address information
