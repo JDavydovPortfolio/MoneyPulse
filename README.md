@@ -2,7 +2,7 @@
 
 <div align="center">
 
-[![MoneyPulse](https://img.shields.io/badge/MoneyPulse-Enterprise%20AI%20Solution-4CAF50?style=for-the-badge)](https://github.com/JDavydovPortfolio/MerchantPulse-Pipeline)
+[![MoneyPulse](https://img.shields.io/badge/MoneyPulse-Enterprise%20AI%20Solution-4CAF50?style=for-the-badge)](https://github.com/JDavydovPortfolio/MoneyPulse)
 [![Python Version](https://img.shields.io/badge/python-3.9+-blue.svg?style=flat-square)](https://python.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 [![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg?style=flat-square)](https://microsoft.com/windows)

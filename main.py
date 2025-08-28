@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Merchant Document Processing Pipeline
-Premium GUI Version - Main Entry Point
+MoneyPulse - Enterprise Financial Document Intelligence
+AI-Powered Document Processing Pipeline - Main Entry Point
 """
 
 import sys

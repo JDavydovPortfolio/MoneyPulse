@@ -1,13 +1,13 @@
 # Changelog
 
-All notable changes to the MerchantPulse Pipeline project will be documented in this file.
+All notable changes to the MoneyPulse project will be documented in this file.
 
 ## [v1.0.0] - 2025-08-06
 
-### 🎉 Initial Release
+### Initial Release
 
 #### Added
-- **Standalone Windows Executable** - `MerchantProcessor.exe` (~2.5 GB)
+- **Standalone Windows Executable** - `MoneyPulse.exe` (~2.5 GB)
   - No Python installation required
   - All dependencies bundled (PySide6, PyTorch, OpenCV, Tesseract, etc.)
   - Ready-to-run on any Windows 10/11 (64-bit) machine
@@ -29,9 +29,9 @@ All notable changes to the MerchantPulse Pipeline project will be documented in 
 #### Distribution
 - **EXE Download**: Available in GitHub Releases
 - **Source Code**: Available for developers and customization
-- **Build Scripts**: Automated building with `build-simple.bat`
+- **Build Scripts**: Automated building with `build.bat`
 
-### 🔧 Developer Tools
+### Developer Tools
 - **PyInstaller Spec**: `build-merchant.spec` for consistent builds
 - **Requirements**: Complete Python dependencies list
 - **Documentation**: Comprehensive README with installation and usage guide
