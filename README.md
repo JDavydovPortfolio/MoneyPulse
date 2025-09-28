@@ -1,19 +1,15 @@
 # 🚀 MoneyPulse: MCA Submission Automation Powered by Local AI
 
 <div align="center">
-
 ![AI-Powered Offline MCA Automation](https://img.shields.io/badge/AI--Powered--Offline--MCA--Automation-0078D4?style=for-the-badge)
 ![Air Gapped Security](https://img.shields.io/badge/Air%20Gapped%20Security-No%20Internet%20Required-orange?style=for-the-badge)
 ![Python Version](https://img.shields.io/badge/python-3.9%2B-blue.svg?style=flat-square)
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg?style=flat-square)
 ![Offline Processing](https://img.shields.io/badge/processing-100%25%20Offline-brightgreen.svg?style=flat-square)
-
 </div>
 
 ---
-
 **MoneyPulse supercharges Merchant Cash Advance (MCA) submissions, providing the fastest, most secure, air-gapped AI pipeline—purpose-built for MCA operations.**
-
 ---
 
 ## 💡 What Makes MoneyPulse Unmatched?
@@ -50,3 +46,26 @@
 **Drop the cloud. Dominate the MCA industry with truly private, AI-driven automation.**
 
 If you value compliance, speed, and airtight security—choose MoneyPulse.
+
+## 🚦 How to Run MoneyPulse (Offline MCA Submission AI)
+
+**Requirements:**  
+- Python 3.9+  
+- Tesseract OCR installed  
+- (Optional for advanced parsing) Local LLM/AI server (Ollama, LM Studio, llama.cpp)
+
+**Installation:**  
+```bash
+git clone https://github.com/JDavydovPortfolio/MoneyPulse.git
+cd MoneyPulse
+pip install -r requirements.txt
+```
+
+**Running the pipeline:**  
+```bash
+python main.py
+```
+- Place MCA documents in the `input/` folder  
+- Outputs (JSON, CSV, logs) are saved in `output/` and `logs/`
+
+*All AI processing, validation, and CRM sync happen locally and 100% offline. No internet required.*
