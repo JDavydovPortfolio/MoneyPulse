@@ -1,15 +1,14 @@
-<div align="center">
+# MoneyPulse: Enterprise Financial Document Intelligence
 
+<div align="center">
 ![MoneyPulse](https://img.shields.io/badge/MoneyPulse-Enterprise%20AI%20Solution-4CAF50?style=for-the-badge)
 ![Python Version](https://img.shields.io/badge/python-3.9%2B-blue.svg?style=flat-square)
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg?style=flat-square)
 ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg?style=flat-square)
 ![Offline Processing](https://img.shields.io/badge/processing-100%25%20Offline-brightgreen.svg?style=flat-square)
-
 </div>
 
 # 🚨 Unleash the Next Wave of Enterprise Financial Automation 🚨
-
 **Powered by Local AI, Advanced Pipeline Orchestration, and CISO-grade Data Security**
 
 ---
@@ -35,6 +34,7 @@
 ## 🤖 How does MoneyPulse work?
 
 **Bulk upload your financial docs (PDF, images)** into MoneyPulse and let our intelligent offline pipeline instantly:
+
 - Extract fields with LLMs
 - Validate every record
 - Sync directly to your CRM
@@ -48,27 +48,19 @@ All with **zero manual labor, zero security risk, and zero SaaS licensing drain.
 | Legacy Workflow     | MoneyPulse Instant AI Workflow          |
 |---------------------|-----------------------------------------|
 | **AI Extraction**   | ❌                                      | **✅ Local Transformer LLM — 99.5% accuracy** |
-| **Compliance**      | Risky cloud APIs                        | **Offline, CISO-level security**              |
-| **CRM Integration** | Days–weeks manual                       | **Seconds — Automated Sync, Fully Validated** |
-| **Cost**            | Massive labor                           | **Up to 80% cost reduction**                  |
+| **Compliance**      | Risky cloud APIs                       | **✅ 100% offline, CISO-approved**          |
+| **CRM Integration** | Days–weeks manual                       | **✅ One-click sync to NetSuite, REST, SOAP** |
+| **Cost**            | Massive labor                          | **✅ No subscriptions, infinite scale**      |
 
 ---
 
 ## 🔥 Fast Facts
 
-- **AI-powered document intelligence, always offline**
-- **No subscriptions or fees — run at any scale**
-- **One-click integration for NetSuite, REST, SOAP, and custom CRMs**
-- **Modular design — plug in custom AI, validators, or business logic**
+• AI-powered document intelligence, always offline
+• No subscriptions or fees — run at any scale
+• One-click integration for NetSuite, REST, SOAP, and custom CRMs
+• Modular design — plug in custom AI, validators, or business logic
 
----
-
-<div align="center">
-
-**Drop the cloud.  
-Keep the intelligence.  
-Run your financial workflow _smarter, faster, safer_ — with MoneyPulse.**
-
-</div>
-
----
+**Drop the cloud.**  
+**Keep the intelligence.**  
+**Run your financial workflow smarter, faster, safer — with MoneyPulse.**
