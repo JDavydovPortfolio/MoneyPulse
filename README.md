@@ -1,9 +1,5 @@
 # MoneyPulse
 
-<div align="center">
-  <img src="https://via.placeholder.com/150?text=MoneyPulse" alt="MoneyPulse Logo" width="150" height="150">
-  <h3>MCA Submission Automation Powered by Local AI</h3>
-
   ![AI-Powered](https://img.shields.io/badge/AI--Powered-0078D4?style=for-the-badge)
   ![Air Gapped](https://img.shields.io/badge/Air--Gapped-No%20Internet%20Required-orange?style=for-the-badge)
   ![Python](https://img.shields.io/badge/python-3.9%2B-blue.svg?style=flat-square)
