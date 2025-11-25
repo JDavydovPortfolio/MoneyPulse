@@ -28,8 +28,6 @@ class LLMParser:
                 
                 if ollama_host and model_name in ["llama", "phi", "mistral"]:
                     logger.info(f"Using Ollama model {model_name} at {ollama_host}")
-                    # For Ollama models, we would configure differently
-                    # This is a placeholder for Ollama integration
                 
                 self.generator = pipeline(
                     "text-generation",
@@ -53,25 +51,23 @@ class LLMParser:
             Dictionary containing extracted fields
         """
         try:
-            # Split text into manageable chunks
             chunks = self._chunk_text(text)
 
-            # Initialize structured data with the expected structure for validator and CRM
             structured_data = {
                 "merchant_name": "",
-                "ein_or_ssn": "",  # Changed from tax_id to match validator expectations
-                "document_type": "application",  # Default document type
-                "address": {  # Nested structure for address
+                "ein_or_ssn": "",
+                "document_type": "application",
+                "address": {
                     "street": "",
                     "city": "",
                     "state": "",
                     "zip": ""
                 },
-                "contact_info": {  # Nested structure for contact info
+                "contact_info": {
                     "phone": "",
                     "email": ""
                 },
-                "business_info": {  # Nested structure for business info
+                "business_info": {
                     "business_type": "",
                     "annual_revenue": "",
                     "years_in_business": "",
@@ -79,19 +75,15 @@ class LLMParser:
                 },
                 "requested_amount": "",
                 "source_file": filename if filename else "unknown",
-                "confidence_score": 0.7,  # Default confidence score
-                "flagged_issues": []  # Initialize empty issues list
+                "confidence_score": 0.7,
+                "flagged_issues": []
             }
 
-            # Process top-level fields with specific prompts
-            # Define which fields to process directly (not nested dictionaries)
             direct_fields = ["merchant_name", "ein_or_ssn", "document_type", "requested_amount"]
             
-            # Process direct fields
             for field in direct_fields:
-                prompt = self._get_field_prompt(field, chunks[0])  # Use first chunk for basic info
+                prompt = self._get_field_prompt(field, chunks[0])
                 response = self.generator(prompt, max_length=100, num_return_sequences=1)
-                # Handle different response formats from transformers pipeline
                 if isinstance(response, list) and len(response) > 0:
                     if isinstance(response[0], dict) and 'generated_text' in response[0]:
                         structured_data[field] = self._clean_response(response[0]['generated_text'])
@@ -100,7 +92,6 @@ class LLMParser:
                 else:
                     structured_data[field] = ""
             
-            # Process address fields
             address_fields = ["street", "city", "state", "zip"]
             for field in address_fields:
                 prompt = self._get_field_prompt(f"address_{field}", chunks[0])
@@ -111,7 +102,6 @@ class LLMParser:
                     else:
                         structured_data["address"][field] = self._clean_response(str(response[0]))
             
-            # Process contact fields
             contact_fields = ["phone", "email"]
             for field in contact_fields:
                 prompt = self._get_field_prompt(f"contact_{field}", chunks[0])
@@ -122,7 +112,6 @@ class LLMParser:
                     else:
                         structured_data["contact_info"][field] = self._clean_response(str(response[0]))
             
-            # Process business info fields
             business_fields = ["business_type", "annual_revenue", "years_in_business", "processing_volume"]
             for field in business_fields:
                 prompt = self._get_field_prompt(field, chunks[0])
@@ -142,7 +131,6 @@ class LLMParser:
 
     def _chunk_text(self, text: str, max_length: int = 512) -> List[str]:
         """Split text into manageable chunks."""
-        # Use simple paragraph-based splitting
         paragraphs = text.split('\n\n')
         chunks = []
         current_chunk = []
@@ -166,23 +154,16 @@ class LLMParser:
     def _get_field_prompt(self, field: str, text: str) -> str:
         """Generate appropriate prompt for each field."""
         prompts = {
-            # Direct fields
             "merchant_name": f"Extract the merchant or business name from this text: {text}",
             "ein_or_ssn": f"Find the tax ID, EIN number, or SSN from this text: {text}",
             "document_type": f"What type of document is this (application, statement, invoice, etc.): {text}",
             "requested_amount": f"Extract the requested loan or funding amount from this text: {text}",
-            
-            # Address fields
             "address_street": f"Extract only the street address (no city/state/zip) from this text: {text}",
             "address_city": f"Extract only the city name from this address information: {text}",
             "address_state": f"Extract only the state (2-letter abbreviation preferred) from this address: {text}",
             "address_zip": f"Extract only the ZIP code from this address: {text}",
-            
-            # Contact fields
             "contact_phone": f"Find the phone number from this text: {text}",
             "contact_email": f"Find the email address from this text: {text}",
-            
-            # Business info fields
             "business_type": f"What type of business is described in this text: {text}",
             "annual_revenue": f"Extract the annual revenue amount from this text: {text}",
             "years_in_business": f"How many years has this business been operating according to the text: {text}",
@@ -192,11 +173,9 @@ class LLMParser:
 
     def _clean_response(self, text: str) -> str:
         """Clean up model response to extract relevant information."""
-        # Remove the original prompt if present
         if ":" in text:
             text = text.split(":")[-1]
 
-        # Clean up whitespace and special characters
         text = text.strip()
         text = re.sub(r'\s+', ' ', text)
 
@@ -205,11 +184,9 @@ class LLMParser:
     def test_connection(self) -> bool:
         """Test if the LLM is properly initialized and working."""
         try:
-            # Try a simple generation to test the model
             test_prompt = "Hello, this is a test."
             response = self.generator(test_prompt, max_length=20, num_return_sequences=1)
             
-            # If we get here without an exception, the model is working
             logger.info(f"LLM connection test successful")
             return True
             

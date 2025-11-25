@@ -81,7 +81,6 @@ class LLMProviderDetector:
             response = requests.get(f"{host}{endpoint}", timeout=5)
             
             if response.status_code == 200:
-                # Store additional info about the provider
                 provider_info['host'] = host
                 provider_info['status'] = 'available'
                 return True
@@ -113,11 +112,9 @@ class LLMProviderDetector:
                 data = response.json()
                 
                 if provider_id == 'ollama':
-                    # Ollama format
                     for model in data.get('models', []):
                         models.append(model['name'])
                 elif provider_id in ['lm_studio', 'lm_studio_ci', 'llama_cpp']:
-                    # OpenAI-compatible format
                     for model in data.get('data', []):
                         models.append(model['id'])
                 
@@ -141,7 +138,6 @@ class LLMProviderDetector:
             host = provider_info['host']
             endpoint = provider_info['generate_endpoint']
             
-            # Create a simple test prompt
             if provider_id == 'ollama':
                 payload = {
                     "model": model_name,
@@ -153,7 +149,6 @@ class LLMProviderDetector:
                     }
                 }
             else:
-                # OpenAI-compatible format
                 payload = {
                     "model": model_name,
                     "messages": [{"role": "user", "content": "Hello"}],
@@ -199,7 +194,6 @@ class LLMProviderDetector:
         if not self.detected_providers:
             return None
         
-        # Prefer providers with more models
         best_provider = None
         max_models = 0
         
@@ -218,7 +212,6 @@ class LLMProviderDetector:
         
         provider_info = self.detected_providers[provider_id]
         
-        # If no model specified, use the first available one
         if not model_name:
             models = self.available_models.get(provider_id, [])
             if models:

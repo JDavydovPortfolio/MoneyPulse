@@ -3,7 +3,6 @@ import logging
 from typing import List, Dict
 from datetime import datetime
 
-# Import processing modules
 from .ocr import OCRProcessor
 from .llm import LLMParser
 from .validator import DocumentValidator
@@ -17,7 +16,6 @@ class DocumentPipeline:
         self.output_dir = output_dir
         self.config = config or {}
         
-        # Initialize processing components
         self.ocr = OCRProcessor(tesseract_path=self.config.get('tesseract_path'))
         self.llm = LLMParser(
             ollama_host=self.config.get('ollama_host', 'http://localhost:11434'),
@@ -28,7 +26,6 @@ class DocumentPipeline:
         
         self.logger = logging.getLogger(__name__)
         
-        # Setup logging if not already configured
         if not self.logger.handlers:
             self._setup_logging()
     
@@ -37,7 +34,6 @@ class DocumentPipeline:
         if not os.path.exists(input_dir):
             raise FileNotFoundError(f"Input directory not found: {input_dir}")
         
-        # Find all supported files
         supported_extensions = ('.pdf', '.png', '.jpg', '.jpeg')
         files = [
             os.path.join(input_dir, f) 
@@ -62,7 +58,6 @@ class DocumentPipeline:
                 
             except Exception as e:
                 self.logger.error(f"Failed to process {file_path}: {str(e)}")
-                # Add error document to results
                 processed_documents.append({
                     "source_file": os.path.basename(file_path),
                     "error": str(e),
@@ -70,7 +65,6 @@ class DocumentPipeline:
                     "processing_timestamp": datetime.now().isoformat()
                 })
         
-        # Generate CSV summary
         try:
             csv_file = self.crm.generate_csv_summary(processed_documents)
             self.logger.info(f"Generated CSV summary: {csv_file}")
@@ -87,26 +81,21 @@ class DocumentPipeline:
         self.logger.info(f"Starting processing for {filename}")
         
         try:
-            # Step 1: OCR Processing
             self.logger.debug(f"Step 1: OCR extraction for {filename}")
             extracted_text = self.ocr.extract_text(file_path)
             
             if not extracted_text.strip():
                 raise Exception("No text could be extracted from document")
             
-            # Step 2: LLM Parsing
             self.logger.debug(f"Step 2: LLM parsing for {filename}")
             parsed_data = self.llm.parse_document(extracted_text, filename)
             
-            # Step 3: Validation
             self.logger.debug(f"Step 3: Validation for {filename}")
             validated_data = self.validator.validate_document(parsed_data)
             
-            # Step 4: CRM Submission Preparation
             self.logger.debug(f"Step 4: CRM submission for {filename}")
             submission_result = self.crm.submit_document(validated_data)
             
-            # Combine results
             final_result = {
                 **validated_data,
                 "submission_result": submission_result,
@@ -137,7 +126,6 @@ class DocumentPipeline:
             "output_directory": {"status": "unknown", "details": ""}
         }
         
-        # Test OCR
         try:
             if self.ocr.test_installation():
                 results["ocr"] = {"status": "ok", "details": "Tesseract OCR is working"}
@@ -146,7 +134,6 @@ class DocumentPipeline:
         except Exception as e:
             results["ocr"] = {"status": "error", "details": f"OCR error: {str(e)}"}
         
-        # Test LLM
         try:
             if self.llm.test_connection():
                 results["llm"] = {"status": "ok", "details": f"LLM connection successful ({self.llm.model})"}
@@ -155,7 +142,6 @@ class DocumentPipeline:
         except Exception as e:
             results["llm"] = {"status": "error", "details": f"LLM error: {str(e)}"}
         
-        # Test output directory
         try:
             test_file = os.path.join(self.output_dir, "test_write.tmp")
             with open(test_file, 'w') as f:
@@ -204,24 +190,20 @@ class DocumentPipeline:
         log_dir = os.path.join(self.output_dir, "logs")
         os.makedirs(log_dir, exist_ok=True)
         
-        # Create formatter
         formatter = logging.Formatter(
             '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         )
         
-        # File handler
         file_handler = logging.FileHandler(
             os.path.join(log_dir, f"pipeline_{datetime.now().strftime('%Y%m%d')}.log")
         )
         file_handler.setFormatter(formatter)
         file_handler.setLevel(logging.DEBUG)
         
-        # Console handler
         console_handler = logging.StreamHandler()
         console_handler.setFormatter(formatter)
         console_handler.setLevel(logging.INFO)
         
-        # Configure logger
         self.logger.addHandler(file_handler)
         self.logger.addHandler(console_handler)
         self.logger.setLevel(logging.DEBUG)
@@ -230,7 +212,6 @@ class DocumentPipeline:
         """Update pipeline configuration and reinitialize components."""
         self.config.update(new_config)
         
-        # Reinitialize components with new config
         if 'tesseract_path' in new_config:
             self.ocr = OCRProcessor(tesseract_path=new_config['tesseract_path'])
         

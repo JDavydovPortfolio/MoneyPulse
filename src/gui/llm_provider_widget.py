@@ -9,7 +9,6 @@ import os
 from typing import Dict, List, Optional, Callable
 from pathlib import Path
 
-# Add src to path for imports
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
 from PySide6.QtWidgets import *
@@ -20,13 +19,12 @@ import qtawesome as qta
 try:
     from src.llm_detector import LLMProviderDetector
 except ImportError:
-    # Fallback for relative imports
     from ..llm_detector import LLMProviderDetector
 
 class LLMProviderWidget(QWidget):
     """Widget for selecting and configuring LLM providers."""
     
-    provider_changed = Signal(str, str)  # provider_id, model_name
+    provider_changed = Signal(str, str)
     
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -41,35 +39,29 @@ class LLMProviderWidget(QWidget):
         layout = QVBoxLayout(self)
         layout.setSpacing(10)
         
-        # Title
         title_label = QLabel("🤖 LLM Provider Selection")
         title_label.setStyleSheet("font-size: 14px; font-weight: bold; margin-bottom: 10px;")
         layout.addWidget(title_label)
         
-        # Auto-detection status
         self.status_label = QLabel("🔍 Detecting available providers...")
         self.status_label.setStyleSheet("color: #0078d4; font-size: 12px;")
         layout.addWidget(self.status_label)
         
-        # Provider selection group
         provider_group = QGroupBox("Provider Settings")
         provider_layout = QVBoxLayout(provider_group)
         
-        # Provider dropdown
         provider_layout.addWidget(QLabel("LLM Provider:"))
         self.provider_combo = QComboBox()
         self.provider_combo.addItem("🔄 Auto-detect", "auto")
         self.provider_combo.currentTextChanged.connect(self.on_provider_changed)
         provider_layout.addWidget(self.provider_combo)
         
-        # Model dropdown
         provider_layout.addWidget(QLabel("Model:"))
         self.model_combo = QComboBox()
         self.model_combo.addItem("Select a provider first", "")
         self.model_combo.currentTextChanged.connect(self.on_model_changed)
         provider_layout.addWidget(self.model_combo)
         
-        # Provider status display
         self.provider_status = QTextEdit()
         self.provider_status.setMaximumHeight(120)
         self.provider_status.setReadOnly(True)
@@ -78,7 +70,6 @@ class LLMProviderWidget(QWidget):
         
         layout.addWidget(provider_group)
         
-        # Control buttons
         button_layout = QHBoxLayout()
         
         self.refresh_btn = QPushButton("🔄 Refresh Detection")
@@ -99,7 +90,6 @@ class LLMProviderWidget(QWidget):
         
         layout.addLayout(button_layout)
         
-        # Progress bar for detection
         self.progress_bar = QProgressBar()
         self.progress_bar.setVisible(False)
         layout.addWidget(self.progress_bar)
@@ -110,24 +100,20 @@ class LLMProviderWidget(QWidget):
         """Detect available LLM providers."""
         self.status_label.setText("🔍 Detecting available providers...")
         self.progress_bar.setVisible(True)
-        self.progress_bar.setRange(0, 0)  # Indeterminate progress
+        self.progress_bar.setRange(0, 0)
         self.refresh_btn.setEnabled(False)
         
-        # Run detection in background
         QTimer.singleShot(100, self._run_detection)
     
     def _run_detection(self):
         """Run provider detection in background."""
         try:
-            # Detect providers
             detected = self.detector.detect_all_providers()
             
-            # Get models for each detected provider
             for provider_id in detected:
                 models = self.detector.get_available_models(provider_id)
                 self.detector.available_models[provider_id] = models
             
-            # Update UI on main thread
             QTimer.singleShot(0, lambda: self._update_ui_after_detection(detected))
             
         except Exception as e:
@@ -138,12 +124,10 @@ class LLMProviderWidget(QWidget):
         self.progress_bar.setVisible(False)
         self.refresh_btn.setEnabled(True)
         
-        # Update provider combo
         self.provider_combo.clear()
         self.provider_combo.addItem("🔄 Auto-detect", "auto")
         
         if detected_providers:
-            # Add detected providers
             for provider_id, provider_info in detected_providers.items():
                 icon = provider_info.get('icon', '🤖')
                 name = provider_info.get('name', provider_id)
@@ -153,7 +137,6 @@ class LLMProviderWidget(QWidget):
                 display_text = f"{icon} {name} ({model_count} models)"
                 self.provider_combo.addItem(display_text, provider_id)
             
-            # Auto-select the recommended provider
             recommended = self.detector.get_recommended_provider()
             if recommended:
                 for i in range(self.provider_combo.count()):
@@ -167,7 +150,6 @@ class LLMProviderWidget(QWidget):
             self.status_label.setText("❌ No providers detected")
             self.test_btn.setEnabled(False)
         
-        # Update status display
         self._update_status_display()
     
     def _detection_error(self, error_message):
@@ -211,11 +193,9 @@ class LLMProviderWidget(QWidget):
         """Handle provider selection change."""
         provider_id = self.provider_combo.currentData()
         
-        # Update model dropdown
         self.model_combo.clear()
         
         if provider_id == "auto":
-            # Auto-detect mode - use recommended provider
             recommended = self.detector.get_recommended_provider()
             if recommended:
                 models = self.detector.available_models.get(recommended, [])
@@ -226,7 +206,6 @@ class LLMProviderWidget(QWidget):
                     self.current_provider = recommended
                     self.current_model = models[0]
         elif provider_id in self.detector.detected_providers:
-            # Specific provider selected
             models = self.detector.available_models.get(provider_id, [])
             for model in models:
                 self.model_combo.addItem(model)
@@ -239,10 +218,8 @@ class LLMProviderWidget(QWidget):
             self.current_provider = None
             self.current_model = None
         
-        # Enable/disable test button
         self.test_btn.setEnabled(self.current_provider is not None)
         
-        # Emit signal
         if self.current_provider and self.current_model:
             self.provider_changed.emit(self.current_provider, self.current_model)
     
@@ -259,7 +236,6 @@ class LLMProviderWidget(QWidget):
             return
         
         try:
-            # Test the connection
             success = self.detector.test_model_connection(self.current_provider, self.current_model)
             
             if success:
@@ -291,7 +267,6 @@ class LLMProviderWidget(QWidget):
         
         layout = QVBoxLayout(dialog)
         
-        # Help text
         help_text = QTextEdit()
         help_text.setReadOnly(True)
         help_text.setHtml("""
@@ -319,7 +294,6 @@ class LLMProviderWidget(QWidget):
         <h3>Installation Instructions:</h3>
         """)
         
-        # Add provider-specific instructions
         for provider_id, provider_info in self.detector.providers.items():
             instructions = self.detector.get_installation_instructions(provider_id)
             help_text.append(f"<h4>{provider_info['icon']} {provider_info['name']}:</h4>")
@@ -337,7 +311,6 @@ class LLMProviderWidget(QWidget):
         
         layout.addWidget(help_text)
         
-        # Close button
         close_btn = QPushButton("Close")
         close_btn.clicked.connect(dialog.accept)
         layout.addWidget(close_btn)
