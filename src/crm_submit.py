@@ -6,7 +6,7 @@ from typing import Dict, List, Optional
 import os
 import requests
 from requests.auth import HTTPBasicAuth
-import zeep  # For SOAP API
+import zeep
 from urllib.parse import urljoin
 
 class CRMSubmitter:
@@ -17,19 +17,15 @@ class CRMSubmitter:
         self.log_file = os.path.join(output_dir, "crm.log")
         self.logger = logging.getLogger(__name__)
         
-        # Ensure output directory exists
         os.makedirs(output_dir, exist_ok=True)
     
     def submit_document(self, parsed_data: Dict) -> Dict:
         """Submit document to CRM (mock implementation)."""
         try:
-            # Generate clean JSON file
             json_filename = self._generate_json_file(parsed_data)
             
-            # Mock CRM API call
             submission_result = self._mock_crm_submit(parsed_data)
             
-            # Log submission
             self._log_submission(parsed_data, submission_result)
             
             return {
@@ -101,7 +97,6 @@ class CRMSubmitter:
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         json_filename = os.path.join(self.output_dir, f"{base_name}_processed_{timestamp}.json")
         
-        # Clean data for CRM submission
         crm_data = {
             "merchant_information": {
                 "name": parsed_data.get('merchant_name', ''),
@@ -146,10 +141,8 @@ class CRMSubmitter:
         import random
         import time
         
-        # Simulate API processing time
         time.sleep(random.uniform(0.5, 1.5))
         
-        # Check validation status
         if parsed_data.get('validation_status') == 'failed':
             return {
                 "status": "rejected",
@@ -158,7 +151,6 @@ class CRMSubmitter:
                 "timestamp": datetime.now().isoformat()
             }
         
-        # Check confidence score
         confidence = parsed_data.get('confidence_score', 0.5)
         if confidence < 0.3:
             return {
@@ -168,7 +160,6 @@ class CRMSubmitter:
                 "timestamp": datetime.now().isoformat()
             }
         
-        # Simulate 90% success rate for valid documents
         if random.random() < 0.9:
             return {
                 "status": "accepted",
@@ -251,11 +242,9 @@ class EnterpriseCRMConnector:
         self.crm_type = config.get('crm_type', 'rest').lower()
         self.logger = logging.getLogger(__name__)
 
-        # Base URL and authentication setup
         self.base_url = config.get('base_url', '').rstrip('/')
         self.auth_type = config.get('auth_type', 'oauth')
 
-        # Initialize appropriate client
         if self.crm_type == 'soap':
             self._init_soap_client()
         elif self.crm_type == 'rest':
@@ -270,11 +259,9 @@ class EnterpriseCRMConnector:
             from zeep.transports import Transport
             from requests import Session
 
-            # Create session with authentication
             session = Session()
             session.auth = HTTPBasicAuth(self.config['email'], self.config['password'])
 
-            # Add required headers
             session.headers.update({
                 'Content-Type': 'text/xml;charset=UTF-8',
                 'SOAPAction': ''
@@ -286,7 +273,6 @@ class EnterpriseCRMConnector:
                 transport=transport
             )
 
-            # Set application info
             self.soap_client.service.setApplicationInfo(
                 applicationId=self.config.get('app_id', 'MoneyPulse')
             )
@@ -298,7 +284,6 @@ class EnterpriseCRMConnector:
         """Initialize REST client with flexible authentication."""
         self.session = requests.Session()
 
-        # Set up authentication based on auth_type
         if self.auth_type == 'oauth':
             from requests_oauthlib import OAuth1
             oauth = OAuth1(
@@ -319,7 +304,6 @@ class EnterpriseCRMConnector:
                 'Authorization': f"Bearer {self.config.get('api_key')}"
             })
 
-        # Set headers
         self.session.headers.update({
             'Content-Type': 'application/json',
             'Accept': 'application/json'
@@ -327,8 +311,6 @@ class EnterpriseCRMConnector:
 
     def _init_database_client(self):
         """Initialize database client for direct database access."""
-        # This would be implemented based on specific database requirements
-        # For now, using REST as fallback since most CRM systems use APIs
         self._init_rest_client()
 
     def submit_financial_document(self, document_data: Dict) -> Dict:
@@ -363,10 +345,8 @@ class EnterpriseCRMConnector:
     def _submit_via_soap(self, document_data: Dict) -> Dict:
         """Submit document via enterprise CRM SOAP API."""
         try:
-            # Create customer record (adapt based on your CRM system's SOAP structure)
             customer_data = self._map_to_customer_record(document_data)
 
-            # Call CRM SOAP API
             response = self.soap_client.service.add(customer_data)
 
             return {
@@ -388,10 +368,8 @@ class EnterpriseCRMConnector:
     def _submit_via_rest(self, document_data: Dict) -> Dict:
         """Submit document via enterprise CRM REST API."""
         try:
-            # Create customer record
             customer_data = self._map_to_customer_record(document_data)
 
-            # POST to CRM REST API
             endpoint = self.config.get('customer_endpoint', '/customers')
             url = urljoin(self.base_url + '/', endpoint.lstrip('/'))
             response = self.session.post(url, json=customer_data)
@@ -424,8 +402,6 @@ class EnterpriseCRMConnector:
     def _submit_via_database(self, document_data: Dict) -> Dict:
         """Submit document via direct database access."""
         try:
-            # Example: Insert customer data using SQL
-            # This would be adapted based on your specific CRM database schema
             query = """
             INSERT INTO customers (
                 company_name, email, phone, address_line1, city, state, zip_code,
@@ -447,7 +423,6 @@ class EnterpriseCRMConnector:
                 'MoneyPulse'
             ]
 
-            # Use REST endpoint for database operations (most CRM systems provide this)
             endpoint = self.config.get('database_endpoint', '/api/database/execute')
             url = urljoin(self.base_url + '/', endpoint.lstrip('/'))
             payload = {
@@ -487,7 +462,6 @@ class EnterpriseCRMConnector:
         contact_info = document_data.get('contact_information', {})
         address_info = document_data.get('address', {})
 
-        # SOAP format
         if self.crm_type == 'soap':
             return {
                 'name': merchant_info.get('name', ''),
@@ -502,11 +476,10 @@ class EnterpriseCRMConnector:
                         'country': 'US'
                     }
                 },
-                'customForm': '-40',  # Standard customer form
+                'customForm': '-40',
                 'isPerson': False
             }
 
-        # REST/Database format
         else:
             return {
                 'companyname': merchant_info.get('name', ''),
@@ -529,7 +502,6 @@ class EnterpriseCRMConnector:
             raise ValueError("REST or Database connection required for customer queries")
 
         try:
-            # Generic query format - adapt based on your CRM system's query syntax
             if self.crm_type == 'database':
                 query = f"""
                 SELECT
@@ -544,7 +516,7 @@ class EnterpriseCRMConnector:
                     "query": query,
                     "parameters": [customer_id]
                 }
-            else:  # REST API
+            else:
                 payload = {
                     "customer_id": customer_id,
                     "fields": ["company_name", "email", "phone", "address"]
@@ -593,10 +565,8 @@ class EnterpriseCRMSubmitter(CRMSubmitter):
 
     def submit_document(self, parsed_data: Dict) -> Dict:
         """Submit document to both local CRM and enterprise CRM if configured."""
-        # First do the standard CRM submission
         crm_result = super().submit_document(parsed_data)
 
-        # Then submit to enterprise CRM if configured
         enterprise_crm_result = None
         if self.crm_connector:
             try:

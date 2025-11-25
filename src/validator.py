@@ -13,58 +13,47 @@ class DocumentValidator:
         """Apply validation rules and update flagged issues."""
         validation_issues = []
         
-        # EIN/SSN validation
         ein_ssn = parsed_data.get('ein_or_ssn', '')
         if not self._validate_ein_ssn(ein_ssn):
             validation_issues.append(f"Invalid EIN/SSN format: '{ein_ssn}' (must be exactly 9 digits)")
         
-        # ZIP code validation
         zip_code = parsed_data.get('address', {}).get('zip', '')
         if not self._validate_zip(zip_code):
             validation_issues.append(f"Invalid ZIP code: '{zip_code}' (must be exactly 5 digits)")
         
-        # Requested amount validation
         amount = parsed_data.get('requested_amount', '')
         if amount and not self._validate_amount(amount):
             validation_issues.append(f"Invalid requested amount: '{amount}' (must be numeric)")
         
-        # Phone validation
         phone = parsed_data.get('contact_info', {}).get('phone', '')
         if phone and not self._validate_phone(phone):
             validation_issues.append(f"Invalid phone format: '{phone}' (must be 10 digits)")
         
-        # Email validation
         email = parsed_data.get('contact_info', {}).get('email', '')
         if email and not self._validate_email(email):
             validation_issues.append(f"Invalid email format: '{email}'")
         
-        # State validation
         state = parsed_data.get('address', {}).get('state', '')
         if state and not self._validate_state(state):
             validation_issues.append(f"Invalid state: '{state}' (must be 2-letter abbreviation)")
         
-        # Required fields validation
         required_fields = ['merchant_name', 'document_type']
         for field in required_fields:
             if not parsed_data.get(field, '').strip():
                 validation_issues.append(f"Missing required field: {field}")
         
-        # Address completeness check
         address = parsed_data.get('address', {})
         if any(address.values()) and not all([address.get('street'), address.get('city'), address.get('state'), address.get('zip')]):
             validation_issues.append("Incomplete address information")
         
-        # Merge with existing flagged issues
         existing_issues = parsed_data.get('flagged_issues', [])
         all_issues = existing_issues + validation_issues
         
-        # Update document with validation results
         parsed_data['flagged_issues'] = all_issues
         parsed_data['validation_status'] = 'passed' if not validation_issues else 'failed'
         parsed_data['requires_human_review'] = len(all_issues) > 0
         parsed_data['validation_timestamp'] = datetime.now().isoformat()
         
-        # Lower confidence score if there are validation issues
         if validation_issues:
             current_confidence = parsed_data.get('confidence_score', 0.5)
             penalty = min(0.2 * len(validation_issues), 0.4)
@@ -91,7 +80,7 @@ class DocumentValidator:
     def _validate_amount(self, amount: str) -> bool:
         """Validate requested amount is numeric."""
         if not amount:
-            return True  # Empty amount is okay
+            return True
         try:
             clean_amount = re.sub(r'[^\d.]', '', str(amount))
             if not clean_amount:
@@ -126,7 +115,7 @@ class DocumentValidator:
             'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
             'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
             'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY',
-            'DC'  # Washington D.C.
+            'DC'
         }
         
         return state.upper().strip() in valid_states

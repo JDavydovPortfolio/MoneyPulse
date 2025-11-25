@@ -11,16 +11,15 @@ from PySide6.QtGui import *
 import qtawesome as qta
 import qdarkstyle
 
-# Import processing modules
 from src.pipeline import DocumentPipeline
 
 class DocumentProcessorWorker(QThread):
     """Worker thread for document processing to keep UI responsive."""
     
-    progress_updated = Signal(int, int, str)  # current, total, message
-    document_processed = Signal(dict)  # processed document data
-    processing_completed = Signal(list)  # all processed documents
-    error_occurred = Signal(str)  # error message
+    progress_updated = Signal(int, int, str)
+    document_processed = Signal(dict)
+    processing_completed = Signal(list)
+    error_occurred = Signal(str)
     
     def __init__(self, pipeline: DocumentPipeline, files: List[str]):
         super().__init__()
@@ -38,7 +37,6 @@ class DocumentProcessorWorker(QThread):
                 self.processed_documents.append(result)
                 self.document_processed.emit(result)
                 
-                # Check if thread should stop
                 if self.isInterruptionRequested():
                     break
             
@@ -129,18 +127,15 @@ class PremiumDocumentProcessor(QMainWindow):
         self.setMinimumSize(1400, 900)
         self.setWindowIcon(qta.icon('fa5s.chart-line', color='#2E7D32'))
         
-        # Initialize variables
         self.selected_files = []
         self.processed_documents = []
         self.worker_thread = None
         
-        # Initialize processing pipeline
         self.setup_pipeline()
         self.setup_ui()
         self.setup_connections()
         self.setup_menu_bar()
         
-        # Test system components on startup
         QTimer.singleShot(1000, self.test_system_components)
     
     def setup_pipeline(self):
@@ -149,7 +144,7 @@ class PremiumDocumentProcessor(QMainWindow):
             config = {
                 'ollama_host': 'http://localhost:11434',
                 'model': 'phi',
-                'tesseract_path': None  # Auto-detect
+                'tesseract_path': None
             }
             self.pipeline = DocumentPipeline(output_dir="output", config=config)
         except Exception as e:
@@ -158,27 +153,21 @@ class PremiumDocumentProcessor(QMainWindow):
     
     def setup_ui(self):
         """Setup the main user interface."""
-        # Central widget
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         
-        # Main layout
         main_layout = QHBoxLayout(central_widget)
         main_layout.setSpacing(20)
         
-        # Left panel - Controls
         left_panel = self.create_control_panel()
         main_layout.addWidget(left_panel, 1)
         
-        # Right panel - Results
         right_panel = self.create_results_panel()
         main_layout.addWidget(right_panel, 2)
         
-        # Status bar
         self.status_bar = self.statusBar()
         self.status_bar.showMessage("Ready to process documents")
         
-        # Progress bar in status bar
         self.progress_bar = QProgressBar()
         self.progress_bar.setVisible(False)
         self.progress_bar.setMaximumWidth(300)
@@ -189,21 +178,17 @@ class PremiumDocumentProcessor(QMainWindow):
         widget = QWidget()
         layout = QVBoxLayout(widget)
         
-        # File selection group
         file_group = QGroupBox("Document Upload")
         file_layout = QVBoxLayout(file_group)
         
-        # Drop area
         self.drop_area = DropArea()
         file_layout.addWidget(self.drop_area)
         
-        # Browse button
         browse_btn = QPushButton("Browse Files")
         browse_btn.setIcon(qta.icon('fa5s.folder-open', color='white'))
         browse_btn.clicked.connect(self.browse_files)
         file_layout.addWidget(browse_btn)
         
-        # Clear button
         clear_btn = QPushButton("Clear Selection")
         clear_btn.setIcon(qta.icon('fa5s.trash', color='white'))
         clear_btn.clicked.connect(self.clear_selection)
@@ -211,18 +196,15 @@ class PremiumDocumentProcessor(QMainWindow):
         
         layout.addWidget(file_group)
         
-        # Processing group
         process_group = QGroupBox("Processing")
         process_layout = QVBoxLayout(process_group)
         
-        # Process button
         self.process_btn = QPushButton("Process Documents")
         self.process_btn.setIcon(qta.icon('fa5s.play', color='white'))
         self.process_btn.setEnabled(False)
         self.process_btn.clicked.connect(self.process_documents)
         process_layout.addWidget(self.process_btn)
         
-        # Stop button
         self.stop_btn = QPushButton("Stop Processing")
         self.stop_btn.setIcon(qta.icon('fa5s.stop', color='white'))
         self.stop_btn.setEnabled(False)
@@ -231,18 +213,15 @@ class PremiumDocumentProcessor(QMainWindow):
         
         layout.addWidget(process_group)
         
-        # Export group
         export_group = QGroupBox("Export")
         export_layout = QVBoxLayout(export_group)
         
-        # Export CSV button
         self.export_csv_btn = QPushButton("Export CSV Summary")
         self.export_csv_btn.setIcon(qta.icon('fa5s.file-csv', color='white'))
         self.export_csv_btn.setEnabled(False)
         self.export_csv_btn.clicked.connect(self.export_csv)
         export_layout.addWidget(self.export_csv_btn)
         
-        # Open output folder button
         self.open_folder_btn = QPushButton("Open Output Folder")
         self.open_folder_btn.setIcon(qta.icon('fa5s.external-link-alt', color='white'))
         self.open_folder_btn.clicked.connect(self.open_output_folder)
@@ -250,7 +229,6 @@ class PremiumDocumentProcessor(QMainWindow):
         
         layout.addWidget(export_group)
         
-        # System status group
         status_group = QGroupBox("System Status")
         status_layout = QVBoxLayout(status_group)
         
@@ -273,23 +251,19 @@ class PremiumDocumentProcessor(QMainWindow):
         """Create the right results panel."""
         self.tab_widget = QTabWidget()
         
-        # OCR Preview tab
         self.ocr_preview = QTextEdit()
         self.ocr_preview.setReadOnly(True)
         self.ocr_preview.setPlaceholderText("OCR extracted text will appear here...")
         self.tab_widget.addTab(self.ocr_preview, "OCR Preview")
         
-        # Parsed Data tab
         self.data_tree = QTreeWidget()
         self.data_tree.setHeaderLabels(["Field", "Value", "Status"])
         self.data_tree.setAlternatingRowColors(True)
         self.tab_widget.addTab(self.data_tree, "Extracted Data")
         
-        # Validation Results tab
         self.validation_list = QListWidget()
         self.tab_widget.addTab(self.validation_list, "Validation Results")
         
-        # Processing Log tab
         self.log_text = QTextEdit()
         self.log_text.setReadOnly(True)
         self.tab_widget.addTab(self.log_text, "Processing Log")
@@ -304,7 +278,6 @@ class PremiumDocumentProcessor(QMainWindow):
         """Setup application menu bar."""
         menubar = self.menuBar()
         
-        # File menu
         file_menu = menubar.addMenu('File')
         
         open_action = QAction(qta.icon('fa5s.folder-open'), 'Open Files', self)
@@ -319,14 +292,12 @@ class PremiumDocumentProcessor(QMainWindow):
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
         
-        # Settings menu
         settings_menu = menubar.addMenu('Settings')
         
         config_action = QAction(qta.icon('fa5s.cog'), 'Configuration', self)
         config_action.triggered.connect(self.show_configuration)
         settings_menu.addAction(config_action)
         
-        # Help menu
         help_menu = menubar.addMenu('Help')
         
         about_action = QAction(qta.icon('fa5s.info-circle'), 'About', self)
@@ -351,10 +322,8 @@ class PremiumDocumentProcessor(QMainWindow):
         self.process_btn.setEnabled(True)
         self.drop_area.setText(f"{len(files)} file(s) selected")
         
-        # Clear previous results
         self.clear_results()
         
-        # Update status
         self.status_bar.showMessage(f"{len(files)} files selected")
         self.log_message(f"Selected {len(files)} files for processing")
     
@@ -380,17 +349,14 @@ class PremiumDocumentProcessor(QMainWindow):
             QMessageBox.warning(self, "Warning", "Please select documents first")
             return
         
-        # Setup UI for processing
         self.process_btn.setEnabled(False)
         self.stop_btn.setEnabled(True)
         self.progress_bar.setVisible(True)
         self.progress_bar.setMaximum(len(self.selected_files))
         self.progress_bar.setValue(0)
         
-        # Clear previous results
         self.clear_results()
         
-        # Start worker thread
         self.worker_thread = DocumentProcessorWorker(self.pipeline, self.selected_files)
         self.worker_thread.progress_updated.connect(self.update_progress)
         self.worker_thread.document_processed.connect(self.document_processed)
@@ -404,7 +370,7 @@ class PremiumDocumentProcessor(QMainWindow):
         """Stop document processing."""
         if self.worker_thread and self.worker_thread.isRunning():
             self.worker_thread.requestInterruption()
-            self.worker_thread.wait(3000)  # Wait up to 3 seconds
+            self.worker_thread.wait(3000)
             
             self.process_btn.setEnabled(True)
             self.stop_btn.setEnabled(False)
@@ -425,7 +391,6 @@ class PremiumDocumentProcessor(QMainWindow):
         
         if status == 'completed':
             self.log_message(f"Completed: {filename}")
-            # Update UI with latest result
             self.update_results_display(result)
         else:
             error = result.get('error', 'Unknown error')
@@ -435,20 +400,17 @@ class PremiumDocumentProcessor(QMainWindow):
         """Handle completion of all document processing."""
         self.processed_documents = processed_documents
         
-        # Update UI
         self.process_btn.setEnabled(True)
         self.stop_btn.setEnabled(False)
         self.progress_bar.setVisible(False)
         self.export_csv_btn.setEnabled(True)
         
-        # Show completion statistics
         successful = sum(1 for doc in processed_documents if doc.get('processing_status') == 'completed')
         failed = len(processed_documents) - successful
         
         self.status_bar.showMessage(f"Processing completed: {successful} successful, {failed} failed")
         self.log_message(f"Processing completed: {successful} successful, {failed} failed")
         
-        # Show summary dialog
         QMessageBox.information(
             self,
             "Processing Complete",
@@ -471,14 +433,11 @@ class PremiumDocumentProcessor(QMainWindow):
     
     def update_results_display(self, result: Dict):
         """Update the results display with processed document data."""
-        # Update OCR preview
         extracted_text = result.get('extracted_text', '')
         self.ocr_preview.setText(extracted_text)
         
-        # Update data tree
         self.data_tree.clear()
         
-        # Add merchant information
         merchant_item = QTreeWidgetItem(["Merchant Information", "", ""])
         self.data_tree.addTopLevelItem(merchant_item)
         
@@ -490,7 +449,6 @@ class PremiumDocumentProcessor(QMainWindow):
         ein_item = QTreeWidgetItem(["EIN/SSN", ein_ssn, "Valid" if len(ein_ssn.replace('-', '')) == 9 else "Invalid"])
         merchant_item.addChild(ein_item)
         
-        # Add address information
         address_item = QTreeWidgetItem(["Address", "", ""])
         self.data_tree.addTopLevelItem(address_item)
         
@@ -501,7 +459,6 @@ class PremiumDocumentProcessor(QMainWindow):
             addr_field_item = QTreeWidgetItem([field.title(), value, status])
             address_item.addChild(addr_field_item)
         
-        # Add contact information
         contact_item = QTreeWidgetItem(["Contact Information", "", ""])
         self.data_tree.addTopLevelItem(contact_item)
         
@@ -512,16 +469,13 @@ class PremiumDocumentProcessor(QMainWindow):
             contact_field_item = QTreeWidgetItem([field.title(), value, status])
             contact_item.addChild(contact_field_item)
         
-        # Expand all items
         self.data_tree.expandAll()
         
-        # Update validation results
         self.validation_list.clear()
         
         validation_status = result.get('validation_status', 'unknown')
         confidence = result.get('confidence_score', 0.0)
         
-        # Add overall status
         status_item = QListWidgetItem(f"Overall Status: {validation_status.upper()}")
         status_item.setIcon(qta.icon('fa5s.check-circle' if validation_status == 'passed' else 'fa5s.exclamation-triangle'))
         self.validation_list.addItem(status_item)
@@ -530,10 +484,9 @@ class PremiumDocumentProcessor(QMainWindow):
         confidence_item.setIcon(qta.icon('fa5s.chart-line'))
         self.validation_list.addItem(confidence_item)
         
-        # Add flagged issues
         issues = result.get('flagged_issues', [])
         if issues:
-            self.validation_list.addItem(QListWidgetItem(""))  # Separator
+            self.validation_list.addItem(QListWidgetItem(""))
             header_item = QListWidgetItem("Flagged Issues:")
             header_item.setIcon(qta.icon('fa5s.flag'))
             self.validation_list.addItem(header_item)
@@ -543,7 +496,7 @@ class PremiumDocumentProcessor(QMainWindow):
                 issue_item.setIcon(qta.icon('fa5s.exclamation-circle'))
                 self.validation_list.addItem(issue_item)
         else:
-            self.validation_list.addItem(QListWidgetItem(""))  # Separator
+            self.validation_list.addItem(QListWidgetItem(""))
             no_issues_item = QListWidgetItem("✅ No validation issues found")
             no_issues_item.setIcon(qta.icon('fa5s.check'))
             self.validation_list.addItem(no_issues_item)
@@ -614,7 +567,6 @@ class PremiumDocumentProcessor(QMainWindow):
         
         layout = QVBoxLayout(dialog)
         
-        # Ollama settings
         ollama_group = QGroupBox("Ollama Settings")
         ollama_layout = QFormLayout(ollama_group)
         
@@ -626,14 +578,12 @@ class PremiumDocumentProcessor(QMainWindow):
         
         layout.addWidget(ollama_group)
         
-        # Buttons
         button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         button_box.accepted.connect(dialog.accept)
         button_box.rejected.connect(dialog.reject)
         layout.addWidget(button_box)
         
         if dialog.exec() == QDialog.Accepted:
-            # Update configuration
             new_config = {
                 'ollama_host': host_edit.text(),
                 'model': model_edit.text()
@@ -670,7 +620,6 @@ class PremiumDocumentProcessor(QMainWindow):
         formatted_message = f"[{timestamp}] {message}"
         self.log_text.append(formatted_message)
         
-        # Auto-scroll to bottom
         cursor = self.log_text.textCursor()
         cursor.movePosition(QTextCursor.End)
         self.log_text.setTextCursor(cursor)
@@ -699,12 +648,9 @@ def launch_application():
     app = QApplication(sys.argv)
     app.setStyle('Fusion')
     
-    # Apply enhanced dark theme with custom colors
     dark_theme = qdarkstyle.load_stylesheet_pyside6()
     
-    # Add custom enhancements for better eye comfort
     custom_style = """
-    /* Enhanced styling for better visual comfort */
     QMainWindow {
         background: qlineargradient(x1:0, y1:0, x2:1, y2:1, 
             stop:0 #1e1e1e, stop:1 #2d2d2d);
@@ -779,16 +725,13 @@ def launch_application():
     
     app.setStyleSheet(dark_theme + custom_style)
     
-    # Set application properties
     app.setApplicationName("MoneyPulse - Where Finance Meets AI")
     app.setApplicationVersion("1.0.0")
     app.setOrganizationName("MoneyPulse Suite")
     
-    # Create and show main window
     window = PremiumDocumentProcessor()
     window.show()
     
-    # Run application
     sys.exit(app.exec())
 
 if __name__ == "__main__":

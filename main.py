@@ -8,20 +8,16 @@ import sys
 import logging
 from pathlib import Path
 
-# Base directory is wherever this script lives
 BASE_DIR = Path(__file__).resolve().parent
 
-# Add the src/ folder to sys.path so you can import gui.premium_gui
 SRC_DIR = BASE_DIR / "src"
 sys.path.insert(0, str(SRC_DIR))
 
 def setup_application():
     """Create needed dirs and configure logging."""
-    # ensure input/, output/ and logs/ exist next to this script
     for folder in ("input", "output", "logs"):
         (BASE_DIR / folder).mkdir(parents=True, exist_ok=True)
 
-    # configure a rolling file + console logger
     log_path = BASE_DIR / "logs" / "application.log"
     logging.basicConfig(
         level=logging.INFO,
@@ -37,7 +33,6 @@ def main():
     try:
         setup_application()
 
-        # now import your GUI launcher from src/gui/premium_gui.py
         from src.gui.premium_gui import launch_application
         launch_application()
 

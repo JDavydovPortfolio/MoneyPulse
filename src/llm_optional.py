@@ -21,7 +21,6 @@ class LLMParser:
         self.ollama_host = ollama_host
         
         try:
-            # Try to import AI dependencies
             import torch
             from transformers import pipeline
             
@@ -52,10 +51,8 @@ class LLMParser:
     def _parse_with_ai(self, text: str, filename: str = None) -> Dict[str, Any]:
         """Parse using AI models."""
         try:
-            # Create prompt for parsing
             prompt = self._create_parsing_prompt(text)
             
-            # Generate response
             response = self.generator(
                 prompt,
                 max_length=512,
@@ -65,7 +62,6 @@ class LLMParser:
                 truncation=True
             )
             
-            # Extract and structure the response
             generated_text = response[0]['generated_text']
             return self._structure_response(generated_text, filename)
             
@@ -90,7 +86,6 @@ class LLMParser:
             "warnings": ["AI parsing not available - using basic regex patterns"]
         }
         
-        # Basic regex patterns for common document fields
         patterns = {
             "business_name": r"(?:business|company|entity)\s+name[:\s]+([^\n\r]+)",
             "phone": r"(\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4})",
@@ -100,13 +95,11 @@ class LLMParser:
             "account": r"(?:account)[:\s]*([0-9]{4,17})",
         }
         
-        # Extract using patterns
         for field, pattern in patterns.items():
             matches = re.findall(pattern, text, re.IGNORECASE)
             if matches:
                 result["extracted_fields"][field] = matches[0] if len(matches) == 1 else matches
         
-        # Structure specific fields
         if "business_name" in result["extracted_fields"]:
             result["business_name"] = result["extracted_fields"]["business_name"]
         
@@ -145,10 +138,8 @@ Response:"""
     def _structure_response(self, generated_text: str, filename: str) -> Dict[str, Any]:
         """Structure the AI response into our standard format."""
         try:
-            # Try to extract JSON from the response
             import json
             
-            # Look for JSON in the response
             json_start = generated_text.find('{')
             json_end = generated_text.rfind('}') + 1
             
@@ -156,7 +147,6 @@ Response:"""
                 json_str = generated_text[json_start:json_end]
                 parsed = json.loads(json_str)
                 
-                # Structure according to our format
                 result = {
                     "filename": filename or "unknown",
                     "parsing_method": "ai_enhanced",
@@ -173,7 +163,6 @@ Response:"""
         except Exception as e:
             logger.warning(f"Failed to parse AI response as JSON: {e}")
         
-        # Fallback: treat as unstructured text
         return {
             "filename": filename or "unknown",
             "parsing_method": "ai_unstructured",
