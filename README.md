@@ -1,114 +1,149 @@
 # MoneyPulse
 
-  ![AI-Powered](https://img.shields.io/badge/AI--Powered-0078D4?style=for-the-badge)
-  ![Air Gapped](https://img.shields.io/badge/Air--Gapped-No%20Internet%20Required-orange?style=for-the-badge)
-  ![Python](https://img.shields.io/badge/python-3.9%2B-blue.svg?style=flat-square)
-  ![License](https://img.shields.io/badge/License-MIT-green.svg?style=flat-square)
-  ![Offline](https://img.shields.io/badge/Processing-100%25%20Offline-brightgreen.svg?style=flat-square)
-</div>
+MoneyPulse is an experimental, local-first financial document processing pipeline for Merchant Cash Advance (MCA) and related operational workflows. It combines OCR, local model-based extraction, deterministic validation, structured exports, and optional CRM integration.
 
-## Overview
+> **Status:** active modernization. MoneyPulse is a portfolio/open-source project and is not a production underwriting, compliance, or decisioning system. Extracted data should be reviewed before it is used in a financial workflow.
 
-**MoneyPulse** transforms Merchant Cash Advance (MCA) submissions through a secure, offline AI pipeline specifically engineered for MCA operations. Our solution delivers unmatched speed, security, and accuracy in a completely air-gapped environment.
+## What it does
 
-> *Supercharge your MCA processing with intelligent automation that never compromises on security.*
+The current pipeline is designed around:
 
-## ✨ Key Features
+1. **Document intake** — PDF, PNG, JPG, and JPEG files.
+2. **OCR** — Tesseract-based text extraction with image preprocessing.
+3. **Local model parsing** — the primary parser uses Hugging Face Transformers and can run on CPU or CUDA.
+4. **Validation** — deterministic checks for fields such as EIN/SSN, ZIP code, phone number, email, state, and requested amount.
+5. **Human-review flags** — validation issues are surfaced instead of silently accepted.
+6. **Structured output** — JSON and CSV artifacts for downstream workflows.
+7. **CRM integration** — a mock/local submission flow is included for development, plus configurable REST/SOAP integration code for external systems.
 
-<table>
-  <tr>
-    <td width="50%" valign="top">
-      <h3>🧠 AI-Driven Data Extraction</h3>
-      <p>Local transformer intelligence parses MCA applications from PDFs and images with impressive accuracy—even handling handwritten forms.</p>
-    </td>
-    <td width="50%" valign="top">
-      <h3>🕵️ Air-Gapped Security</h3>
-      <p>100% offline operation with zero internet connectivity requirements—no external calls, no SaaS, and no sensitive data leaving your environment.</p>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" valign="top">
-      <h3>🔒 Compliance-Ready</h3>
-      <p>Meets strict bank, lender, and fintech policies for data isolation, perfect for highly regulated financial environments.</p>
-    </td>
-    <td width="50%" valign="top">
-      <h3>⚡ Performance & Accuracy</h3>
-      <p>80% faster processing with 99.5%+ accuracy, including field validation, applicant matching, and CRM integration.</p>
-    </td>
-  </tr>
-</table>
+The repository also contains local-provider detection code for **Ollama, LM Studio, and llama.cpp-compatible endpoints**. Consolidating those providers behind one parser interface is part of the modernization roadmap.
 
-## 📊 The MoneyPulse Advantage
-
-| Traditional MCA Processing | MoneyPulse Solution |
-|----------------------------|---------------------|
-| Manual field review prone to errors | AI-powered extraction with automatic validation |
-| Risky cloud-based services | Completely air-gapped, offline, with zero data leaks |
-| Days of manual CRM data entry | Instant, automated applicant synchronization |
-| Limited scalability | Process hundreds of applications in parallel |
-| Compliance concerns | Built for regulated financial environments |
-
-## 🚀 Complete Pipeline
+## Architecture
 
 ```mermaid
-graph LR
-    A[Document Intake] --> B[AI Processing]
-    B --> C[Data Validation]
-    C --> D[Error Handling]
-    D --> E[CRM/API Integration]
-    E --> F[Audit & Reporting]
+flowchart LR
+    A[PDF / Image] --> B[Tesseract OCR]
+    B --> C[Local model extraction]
+    C --> D[Deterministic validation]
+    D --> E{Review required?}
+    E -->|Yes| F[Human review]
+    E -->|No| G[Structured output]
+    F --> G
+    G --> H[JSON / CSV]
+    G --> I[Optional CRM adapter]
 ```
 
-MoneyPulse automates the entire MCA workflow from document intake to CRM submission with comprehensive validation and error handling at every step.
+## Privacy model
 
-## 🛡️ Security & Compliance
+MoneyPulse is designed to support local processing. OCR and the primary Transformers parser can operate on the same machine as the documents.
 
-- **Zero Data Leakage**: Completely offline processing
-- **Audit Ready**: Full tracking of all processing steps
-- **Data Sovereignty**: All information stays within your secure environment
-- **Regulatory Compliance**: Designed for financial services requirements
+A few important details:
 
-## 🔧 Getting Started
+- Python packages and model weights may require network access during initial installation/download unless they are already cached or supplied offline.
+- Optional CRM connectors make network requests when configured.
+- No claim is made that a particular deployment is compliant with a specific regulation or security standard. Deployment security depends on how the software, model runtime, operating system, storage, and integrations are configured.
 
-### Requirements
-- Python 3.9 or higher
-- Tesseract OCR installed locally
-- For advanced parsing (optional): Local LLM/AI server (Ollama, LM Studio, or llama.cpp)
+## Requirements
 
-### Installation
+- Python 3.9+
+- Tesseract OCR
+- Poppler for PDF-to-image conversion used by `pdf2image`
+- Sufficient memory for the selected local model
+- Optional CUDA-capable GPU for faster local inference
+
+## Installation
 
 ```bash
-# Clone the repository
 git clone https://github.com/JDavydovPortfolio/MoneyPulse.git
 cd MoneyPulse
 
-# Install dependencies
+python -m venv .venv
+```
+
+Activate the environment:
+
+**Windows PowerShell**
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+**macOS / Linux**
+
+```bash
+source .venv/bin/activate
+```
+
+Install dependencies:
+
+```bash
+python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### Quick Start
+For the lighter OCR-oriented dependency set:
 
-1. Place MCA documents in the `input/` folder
-2. Run the processing pipeline:
-   ```bash
-   python main.py
-   ```
-3. Review processed outputs in the `output/` directory
+```bash
+pip install -r requirements-minimal.txt
+```
 
-## 📈 Why Choose MoneyPulse?
+## Run
 
-- **Purpose-Built for MCA**: Tailored specifically for the unique needs of MCA providers
-- **Modular Architecture**: Easy to customize or integrate with existing systems
-- **Scalable Processing**: Handle growing volumes without compromising performance
-- **Local Intelligence**: Advanced AI capabilities without the cloud privacy concerns
+```bash
+python main.py
+```
 
-## 📄 License
+The desktop application creates/uses:
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+- `input/` for source documents
+- `output/` for generated JSON/CSV data
+- `logs/` for local runtime logs
 
----
+Do not commit real merchant, applicant, banking, tax-ID, or other sensitive documents to the repository.
 
-<div align="center">
-  <p><strong>MoneyPulse</strong> — Secure. Efficient. Compliant.</p>
-  <p>Drop the cloud. Dominate the MCA industry with truly private, AI-driven automation.</p>
-</div>
+## Development
+
+The lightweight CI suite intentionally avoids downloading large ML models. It checks that the Python source compiles and runs deterministic validator tests.
+
+```bash
+pip install pytest
+python -m compileall -q main.py src
+pytest -q
+```
+
+Security scanning is also configured through GitHub Actions with Bandit.
+
+## Current limitations
+
+MoneyPulse is under active modernization. In the current codebase:
+
+- model output is not a substitute for human verification;
+- accuracy varies by document quality, OCR quality, document layout, and model choice;
+- the default CRM submission flow is a mock implementation intended for development/testing;
+- external CRM integrations require deployment-specific configuration and testing;
+- local provider support exists in multiple modules and still needs consolidation behind a single inference interface;
+- there is no published benchmark supporting a fixed extraction-accuracy or speed claim.
+
+## Roadmap
+
+Near-term work includes:
+
+- unify Transformers, Ollama, LM Studio, and llama.cpp-compatible inference behind one provider interface;
+- expand deterministic tests for OCR-independent parsing and validation;
+- add synthetic/sample financial documents for reproducible demos;
+- add schema validation for model output;
+- improve error handling and observability;
+- document secure deployment patterns;
+- add reproducible benchmarks before publishing performance claims.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). Bug reports and focused pull requests are welcome.
+
+## Security
+
+Please see [SECURITY.md](SECURITY.md). Do not open a public issue containing real financial data, credentials, tax identifiers, bank-account information, or other sensitive information.
+
+## License
+
+MoneyPulse is licensed under the [MIT License](LICENSE).
