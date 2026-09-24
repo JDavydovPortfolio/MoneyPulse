@@ -16,6 +16,7 @@ All notable changes to MoneyPulse are documented in this file.
 - Updated provider detection to produce configuration that can be consumed directly by the document pipeline.
 
 ### Added
+- Provider, endpoint, and model selection in the desktop configuration dialog.
 - A common local inference interface for Hugging Face Transformers, Ollama, LM Studio, and llama.cpp-compatible endpoints.
 - Deterministic provider/parser tests that do not download a model or call a real inference server.
 - Deterministic validator tests and documented local test commands.

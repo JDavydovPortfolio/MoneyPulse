@@ -140,14 +140,14 @@ MoneyPulse is under active modernization. In the current codebase:
 - accuracy varies by document quality, OCR quality, document layout, and model choice;
 - the default CRM submission flow is a mock implementation intended for development/testing;
 - external CRM integrations require deployment-specific configuration and testing;
-- the desktop configuration screen still exposes the older basic host/model controls and will be updated to surface all providers directly;
+- the desktop configuration screen supports provider/host/model selection, while automatic model discovery remains a separate component;
 - there is no published benchmark supporting a fixed extraction-accuracy or speed claim.
 
 ## Roadmap
 
 Near-term work includes:
 
-- expose the unified provider selection directly in the main desktop UI;
+- integrate detected model lists directly into the main desktop configuration dialog;
 - add synthetic/sample financial documents for reproducible demos;
 - add schema validation for model output;
 - expand OCR-independent extraction tests;

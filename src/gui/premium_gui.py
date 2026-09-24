@@ -142,8 +142,9 @@ class PremiumDocumentProcessor(QMainWindow):
         """Initialize the document processing pipeline."""
         try:
             config = {
-                'ollama_host': 'http://localhost:11434',
-                'model': 'phi',
+                'llm_provider': 'transformers',
+                'llm_host': '',
+                'model': 'microsoft/phi-2',
                 'tesseract_path': None
             }
             self.pipeline = DocumentPipeline(output_dir="output", config=config)
@@ -559,37 +560,104 @@ class PremiumDocumentProcessor(QMainWindow):
         self.status_text.append("\nTest completed.")
     
     def show_configuration(self):
-        """Show configuration dialog."""
+        """Show local model configuration dialog."""
         dialog = QDialog(self)
-        dialog.setWindowTitle("Configuration")
+        dialog.setWindowTitle("MoneyPulse Configuration")
         dialog.setModal(True)
-        dialog.resize(400, 300)
-        
+        dialog.resize(460, 320)
+
         layout = QVBoxLayout(dialog)
-        
-        ollama_group = QGroupBox("Ollama Settings")
-        ollama_layout = QFormLayout(ollama_group)
-        
-        host_edit = QLineEdit(self.pipeline.config.get('ollama_host', 'http://localhost:11434'))
-        model_edit = QLineEdit(self.pipeline.config.get('model', 'phi'))
-        
-        ollama_layout.addRow("Host:", host_edit)
-        ollama_layout.addRow("Model:", model_edit)
-        
-        layout.addWidget(ollama_group)
-        
-        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+
+        model_group = QGroupBox("Local Model Settings")
+        model_layout = QFormLayout(model_group)
+
+        provider_combo = QComboBox()
+        provider_combo.addItem("Transformers (in-process)", "transformers")
+        provider_combo.addItem("Ollama", "ollama")
+        provider_combo.addItem("LM Studio", "lm_studio")
+        provider_combo.addItem("llama.cpp", "llama_cpp")
+
+        current_provider = self.pipeline.config.get(
+            'llm_provider', 'transformers'
+        )
+        for index in range(provider_combo.count()):
+            if provider_combo.itemData(index) == current_provider:
+                provider_combo.setCurrentIndex(index)
+                break
+
+        host_edit = QLineEdit(
+            self.pipeline.config.get('llm_host')
+            or self.pipeline.config.get('ollama_host', '')
+        )
+        host_edit.setPlaceholderText("Local provider endpoint")
+        model_edit = QLineEdit(
+            self.pipeline.config.get('model', 'microsoft/phi-2')
+        )
+
+        provider_defaults = {
+            'transformers': '',
+            'ollama': 'http://localhost:11434',
+            'lm_studio': 'http://localhost:1234',
+            'llama_cpp': 'http://localhost:8080'
+        }
+
+        def sync_provider_fields():
+            provider_id = provider_combo.currentData()
+            current_host = host_edit.text().strip()
+            known_hosts = {
+                value for value in provider_defaults.values() if value
+            }
+
+            if provider_id == 'transformers':
+                host_edit.clear()
+                host_edit.setEnabled(False)
+                host_edit.setPlaceholderText(
+                    "Not used for in-process Transformers"
+                )
+            else:
+                host_edit.setEnabled(True)
+                if not current_host or current_host in known_hosts:
+                    host_edit.setText(provider_defaults[provider_id])
+                host_edit.setPlaceholderText(
+                    provider_defaults[provider_id]
+                )
+
+        provider_combo.currentIndexChanged.connect(
+            sync_provider_fields
+        )
+        sync_provider_fields()
+
+        model_layout.addRow("Provider:", provider_combo)
+        model_layout.addRow("Host:", host_edit)
+        model_layout.addRow("Model:", model_edit)
+
+        layout.addWidget(model_group)
+
+        note = QLabel(
+            "MoneyPulse keeps model inference local when a local backend is "
+            "selected. Optional CRM integrations may still make network calls."
+        )
+        note.setWordWrap(True)
+        layout.addWidget(note)
+
+        button_box = QDialogButtonBox(
+            QDialogButtonBox.Ok | QDialogButtonBox.Cancel
+        )
         button_box.accepted.connect(dialog.accept)
         button_box.rejected.connect(dialog.reject)
         layout.addWidget(button_box)
-        
+
         if dialog.exec() == QDialog.Accepted:
             new_config = {
-                'ollama_host': host_edit.text(),
-                'model': model_edit.text()
+                'llm_provider': provider_combo.currentData(),
+                'llm_host': host_edit.text().strip(),
+                'model': model_edit.text().strip()
             }
             self.pipeline.update_config(new_config)
-            self.log_message("Configuration updated")
+            self.log_message(
+                "Local model configuration updated: "
+                f"{new_config['llm_provider']} / {new_config['model']}"
+            )
     
     def show_about(self):
         """Show about dialog."""
@@ -608,9 +676,9 @@ class PremiumDocumentProcessor(QMainWindow):
             <li>Prepares clean output for CRM systems</li>
             </ul>
             
-            <p><b>Completely offline and secure</b> - your documents never leave your computer.</p>
+            <p><b>Local-first by design.</b> Documents can be processed with local OCR and local model backends. Optional CRM integrations make network calls only when configured.</p>
             
-            <p>Built with Python, PySide6, Tesseract OCR, and Ollama.</p>
+            <p>Built with Python, PySide6, Tesseract OCR, and pluggable local model providers.</p>
             """
         )
     
