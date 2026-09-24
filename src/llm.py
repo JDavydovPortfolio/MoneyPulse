@@ -3,7 +3,7 @@
 
 import logging
 import re
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import torch
 from transformers import pipeline
@@ -27,7 +27,7 @@ class LLMParser:
         self,
         model_name: str = "microsoft/phi-2",
         ollama_host: str = "http://localhost:11434",
-        model: str | None = None,
+        model: Optional[str] = None,
     ):
         requested_model = model or model_name
         resolved_model = self.MODEL_ALIASES.get(requested_model, requested_model)
@@ -46,7 +46,9 @@ class LLMParser:
             logger.error("Failed to initialize local model %s: %s", resolved_model, exc)
             raise
 
-    def parse_document(self, text: str, filename: str | None = None) -> Dict[str, Any]:
+    def parse_document(
+        self, text: str, filename: Optional[str] = None
+    ) -> Dict[str, Any]:
         """Parse document text and return the current MoneyPulse field schema."""
         try:
             chunks = self._chunk_text(text)
