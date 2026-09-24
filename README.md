@@ -66,6 +66,13 @@ A few important details:
 - Optional CRM connectors make external network requests when configured.
 - No claim is made that a particular deployment is compliant with a specific regulation or security standard. Deployment security depends on how the software, model runtime, operating system, storage, and integrations are configured.
 
+## Repository documentation
+
+- [Architecture](docs/ARCHITECTURE.md)
+- [Synthetic examples](examples/README.md)
+- [Contributing](CONTRIBUTING.md)
+- [Security policy](SECURITY.md)
+
 ## Requirements
 
 - Python 3.9+

@@ -1,0 +1,24 @@
+name: Feature request
+description: Suggest an improvement to MoneyPulse.
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or workflow
+      description: What problem would this feature solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed approach
+      description: Describe the behavior or interface you have in mind.
+    validations:
+      required: true
+  - type: textarea
+    id: local_first
+    attributes:
+      label: Local-first and privacy considerations
+      description: Note any model, network, storage, or sensitive-data implications.

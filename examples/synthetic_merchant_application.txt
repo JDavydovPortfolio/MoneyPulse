@@ -1,0 +1,21 @@
+SYNTHETIC MONEY PULSE DEMO — NOT A REAL FINANCIAL APPLICATION
+
+Business Name: Example Harbor Coffee LLC
+Business Type: Coffee Shop
+EIN: 99-9999999
+Phone: (212) 555-0100
+Email: finance@example.com
+
+Business Address:
+123 Example Avenue
+New York, NY 10001
+
+Years in Business: 4
+Annual Revenue: $525,000
+Requested Funding Amount: $75,000
+Average Monthly Card Processing Volume: $48,000
+
+Purpose of Funding:
+Equipment replacement and seasonal inventory.
+
+This document contains fictional demonstration data only.
