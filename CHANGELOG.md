@@ -1,54 +1,35 @@
 # Changelog
 
-All notable changes to the MoneyPulse project will be documented in this file.
+All notable changes to MoneyPulse are documented in this file.
+
+## [Unreleased]
+
+### Fixed
+- Restored the intended `LLMParser` constructor after an accidental nested-class definition prevented normal pipeline initialization.
+- Corrected the lightweight dependency list so it no longer attempts to install `tkinter` from PyPI and includes OCR imports required by the current code.
+
+### Changed
+- Reworked the README around verifiable current behavior and removed unsupported fixed accuracy, speed, compliance, and "zero leakage" claims.
+- Expanded `.gitignore` coverage for runtime financial data, local configuration, caches, IDE files, and build artifacts.
+- Added the missing PyYAML runtime dependency used by local provider detection.
+
+### Added
+- Deterministic validator tests and documented local test commands.
+- Contributor and security guidance for an open-source release.
 
 ## [v1.0.0] - 2025-08-06
 
 ### Initial Release
 
-#### Added
-- **Standalone Windows Executable** - `MoneyPulse.exe` (~2.5 GB)
-  - No Python installation required
-  - All dependencies bundled (PySide6, PyTorch, OpenCV, Tesseract, etc.)
-  - Ready-to-run on any Windows 10/11 (64-bit) machine
-- **Premium GUI Interface** - Professional PySide6 application with dark theme
-- **Advanced OCR Processing** - Tesseract integration for PDF and image text extraction
-- **AI-Powered Document Parsing** - Local LLM processing with Ollama/LM Studio support
-- **Smart Validation Engine** - Business rule validation with error flagging
-- **CRM Integration** - Clean JSON/CSV output ready for CRM systems
-- **100% Offline Processing** - Documents never leave your computer
-- **Multi-threaded Performance** - Progress tracking and optimized processing
+- Windows-oriented desktop application and PyInstaller build configuration.
+- Tesseract OCR for PDF/image extraction.
+- Local model parsing experiments and provider-detection utilities.
+- Deterministic field validation and human-review flags.
+- JSON/CSV exports and development/mock CRM submission flow.
+- Optional REST/SOAP CRM connector code.
 
-#### Technical Features
-- **Document Types Supported**: Merchant applications, W-9 forms, voided checks, bank statements
-- **File Formats**: PDF (multi-page), PNG, JPG, JPEG
-- **Output Formats**: JSON (structured data), CSV (Excel-friendly summaries)
-- **Logging**: Comprehensive application and processing logs
-- **Build System**: PyInstaller configuration for executable creation
+> Historical release notes have been condensed here during the 2026 documentation cleanup. Performance and compliance statements from early project documentation are not treated as verified benchmarks.
 
-#### Distribution
-- **EXE Download**: Available in GitHub Releases
-- **Source Code**: Available for developers and customization
-- **Build Scripts**: Automated building with `build.bat`
+### Versioning
 
-### Developer Tools
-- **PyInstaller Spec**: `build-merchant.spec` for consistent builds
-- **Requirements**: Complete Python dependencies list
-- **Documentation**: Comprehensive README with installation and usage guide
-
----
-
-## Future Releases
-
-### Planned Features
-- Sample document templates
-- Additional LLM provider support
-- Enhanced validation rules
-- Cloud storage integration options
-- Multi-language OCR support
-
-### Version Numbering
-This project follows [Semantic Versioning](https://semver.org/):
-- **MAJOR**: Incompatible API changes
-- **MINOR**: New functionality (backwards compatible)
-- **PATCH**: Bug fixes (backwards compatible)
+The project uses semantic versioning for tagged releases.
