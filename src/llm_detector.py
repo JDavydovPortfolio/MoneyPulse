@@ -1,298 +1,351 @@
 #!/usr/bin/env python3
-"""
-LLM Provider Detection and Management
-Automatically detects available LLM providers and manages connections
-"""
+"""Detection and configuration helpers for local LLM providers."""
 
 import logging
+from typing import Dict, List, Optional
+
 import requests
-import json
 import yaml
-from typing import Dict, List, Optional, Tuple
-from pathlib import Path
-import subprocess
-import time
+
+from .llm_providers import DEFAULT_HOSTS, create_provider
 
 logger = logging.getLogger(__name__)
 
+
 class LLMProviderDetector:
-    """Detects and manages different LLM providers."""
-    
+    """Detect locally running model servers and available models."""
+
     def __init__(self):
         self.providers = {
-            'ollama': {
-                'name': 'Ollama',
-                'default_host': 'http://localhost:11434',
-                'test_endpoint': '/api/tags',
-                'models_endpoint': '/api/tags',
-                'generate_endpoint': '/api/generate',
-                'icon': '🐙'
+            "ollama": {
+                "name": "Ollama",
+                "default_host": DEFAULT_HOSTS["ollama"],
+                "models_endpoint": "/api/tags",
+                "icon": "🐙",
             },
-            'lm_studio': {
-                'name': 'LM Studio',
-                'default_host': 'http://localhost:1234',
-                'test_endpoint': '/v1/models',
-                'models_endpoint': '/v1/models',
-                'generate_endpoint': '/v1/chat/completions',
-                'icon': '🎯'
+            "lm_studio": {
+                "name": "LM Studio",
+                "default_host": DEFAULT_HOSTS["lm_studio"],
+                "models_endpoint": "/v1/models",
+                "icon": "🎯",
             },
-            'lm_studio_ci': {
-                'name': 'LM Studio CI',
-                'default_host': 'http://localhost:1234',
-                'test_endpoint': '/v1/models',
-                'models_endpoint': '/v1/models',
-                'generate_endpoint': '/v1/chat/completions',
-                'icon': '🚀'
+            "lm_studio_ci": {
+                "name": "LM Studio CI",
+                "default_host": DEFAULT_HOSTS["lm_studio_ci"],
+                "models_endpoint": "/v1/models",
+                "icon": "🚀",
             },
-            'llama_cpp': {
-                'name': 'llama.cpp',
-                'default_host': 'http://localhost:8080',
-                'test_endpoint': '/v1/models',
-                'models_endpoint': '/v1/models',
-                'generate_endpoint': '/v1/chat/completions',
-                'icon': '🦙'
-            }
+            "llama_cpp": {
+                "name": "llama.cpp",
+                "default_host": DEFAULT_HOSTS["llama_cpp"],
+                "models_endpoint": "/v1/models",
+                "icon": "🦙",
+            },
         }
-        
-        self.detected_providers = {}
-        self.available_models = {}
-    
+
+        self.detected_providers: Dict[str, Dict] = {}
+        self.available_models: Dict[str, List[str]] = {}
+
     def detect_all_providers(self) -> Dict[str, Dict]:
-        """Detect all available LLM providers."""
-        logger.info("Detecting available LLM providers...")
-        
+        logger.info(
+            "Detecting available local LLM providers"
+        )
         self.detected_providers = {}
-        
-        for provider_id, provider_info in self.providers.items():
-            if self._test_provider_connection(provider_id, provider_info):
-                self.detected_providers[provider_id] = provider_info
-                logger.info(f"✅ Detected {provider_info['name']}")
-            else:
-                logger.info(f"❌ {provider_info['name']} not available")
-        
+
+        for provider_id, provider_info in (
+            self.providers.items()
+        ):
+            host = provider_info["default_host"]
+            try:
+                provider = create_provider(
+                    provider_id=provider_id,
+                    model="__probe__",
+                    host=host,
+                )
+                if provider.test_connection():
+                    detected = provider_info.copy()
+                    detected["host"] = host
+                    detected["status"] = "available"
+                    self.detected_providers[
+                        provider_id
+                    ] = detected
+                    logger.info(
+                        "Detected %s at %s",
+                        provider_info["name"],
+                        host,
+                    )
+            except Exception as exc:
+                logger.debug(
+                    "%s detection failed: %s",
+                    provider_info["name"],
+                    exc,
+                )
+
         return self.detected_providers
-    
-    def _test_provider_connection(self, provider_id: str, provider_info: Dict) -> bool:
-        """Test if a specific provider is available."""
-        try:
-            host = provider_info['default_host']
-            endpoint = provider_info['test_endpoint']
-            
-            response = requests.get(f"{host}{endpoint}", timeout=5)
-            
-            if response.status_code == 200:
-                provider_info['host'] = host
-                provider_info['status'] = 'available'
-                return True
-            else:
-                logger.debug(f"{provider_info['name']} returned status {response.status_code}")
-                return False
-                
-        except requests.exceptions.RequestException as e:
-            logger.debug(f"{provider_info['name']} connection failed: {e}")
-            return False
-        except Exception as e:
-            logger.debug(f"Error testing {provider_info['name']}: {e}")
-            return False
-    
-    def get_available_models(self, provider_id: str) -> List[str]:
-        """Get available models for a specific provider."""
+
+    def get_available_models(
+        self,
+        provider_id: str,
+    ) -> List[str]:
         if provider_id not in self.detected_providers:
             return []
-        
+
+        provider_info = self.detected_providers[
+            provider_id
+        ]
+        host = provider_info["host"]
+        endpoint = provider_info["models_endpoint"]
+
         try:
-            provider_info = self.detected_providers[provider_id]
-            host = provider_info['host']
-            endpoint = provider_info['models_endpoint']
-            
-            response = requests.get(f"{host}{endpoint}", timeout=10)
-            
-            if response.status_code == 200:
-                models = []
-                data = response.json()
-                
-                if provider_id == 'ollama':
-                    for model in data.get('models', []):
-                        models.append(model['name'])
-                elif provider_id in ['lm_studio', 'lm_studio_ci', 'llama_cpp']:
-                    for model in data.get('data', []):
-                        models.append(model['id'])
-                
-                self.available_models[provider_id] = models
-                return models
-            else:
-                logger.warning(f"Failed to get models for {provider_info['name']}: {response.status_code}")
-                return []
-                
-        except Exception as e:
-            logger.error(f"Error getting models for {provider_id}: {e}")
-            return []
-    
-    def test_model_connection(self, provider_id: str, model_name: str) -> bool:
-        """Test if a specific model is available and working."""
-        if provider_id not in self.detected_providers:
-            return False
-        
-        try:
-            provider_info = self.detected_providers[provider_id]
-            host = provider_info['host']
-            endpoint = provider_info['generate_endpoint']
-            
-            if provider_id == 'ollama':
-                payload = {
-                    "model": model_name,
-                    "prompt": "Hello",
-                    "stream": False,
-                    "options": {
-                        "temperature": 0.7,
-                        "num_predict": 10
-                    }
-                }
-            else:
-                payload = {
-                    "model": model_name,
-                    "messages": [{"role": "user", "content": "Hello"}],
-                    "temperature": 0.7,
-                    "max_tokens": 10,
-                    "stream": False
-                }
-            
-            response = requests.post(
+            response = requests.get(
                 f"{host}{endpoint}",
-                json=payload,
-                headers={"Content-Type": "application/json"},
-                timeout=30
+                timeout=10,
             )
-            
-            return response.status_code == 200
-            
-        except Exception as e:
-            logger.error(f"Error testing model {model_name} on {provider_id}: {e}")
+            response.raise_for_status()
+            data = response.json()
+
+            if provider_id == "ollama":
+                models = [
+                    model["name"]
+                    for model in data.get(
+                        "models",
+                        [],
+                    )
+                    if model.get("name")
+                ]
+            else:
+                models = [
+                    model["id"]
+                    for model in data.get(
+                        "data",
+                        [],
+                    )
+                    if model.get("id")
+                ]
+
+            self.available_models[provider_id] = (
+                models
+            )
+            return models
+        except Exception as exc:
+            logger.error(
+                "Failed to list models for %s: %s",
+                provider_id,
+                exc,
+            )
+            return []
+
+    def test_model_connection(
+        self,
+        provider_id: str,
+        model_name: str,
+    ) -> bool:
+        if provider_id not in self.detected_providers:
             return False
-    
+
+        provider_info = self.detected_providers[
+            provider_id
+        ]
+        try:
+            provider = create_provider(
+                provider_id=provider_id,
+                model=model_name,
+                host=provider_info["host"],
+            )
+            provider.generate(
+                "Reply with OK.",
+                max_tokens=8,
+                temperature=0.0,
+            )
+            return True
+        except Exception as exc:
+            logger.error(
+                "Model test failed for %s/%s: %s",
+                provider_id,
+                model_name,
+                exc,
+            )
+            return False
+
     def get_provider_status(self) -> Dict[str, Dict]:
-        """Get detailed status of all providers."""
         status = {}
-        
-        for provider_id, provider_info in self.providers.items():
-            is_available = provider_id in self.detected_providers
-            models = self.available_models.get(provider_id, [])
-            
+
+        for provider_id, provider_info in (
+            self.providers.items()
+        ):
+            is_available = (
+                provider_id
+                in self.detected_providers
+            )
+            models = self.available_models.get(
+                provider_id,
+                [],
+            )
+
             status[provider_id] = {
-                'name': provider_info['name'],
-                'icon': provider_info['icon'],
-                'available': is_available,
-                'host': provider_info['default_host'],
-                'model_count': len(models),
-                'models': models
+                "name": provider_info["name"],
+                "icon": provider_info["icon"],
+                "available": is_available,
+                "host": provider_info[
+                    "default_host"
+                ],
+                "model_count": len(models),
+                "models": models,
             }
-        
+
         return status
-    
-    def get_recommended_provider(self) -> Optional[str]:
-        """Get the recommended provider based on availability and model count."""
+
+    def get_recommended_provider(
+        self,
+    ) -> Optional[str]:
         if not self.detected_providers:
             return None
-        
-        best_provider = None
-        max_models = 0
-        
-        for provider_id in self.detected_providers:
-            models = self.available_models.get(provider_id, [])
-            if len(models) > max_models:
-                max_models = len(models)
-                best_provider = provider_id
-        
-        return best_provider
-    
-    def create_config_for_provider(self, provider_id: str, model_name: str = None) -> Dict:
-        """Create a configuration dictionary for a specific provider."""
+
+        return max(
+            self.detected_providers,
+            key=lambda provider_id: len(
+                self.available_models.get(
+                    provider_id,
+                    [],
+                )
+            ),
+        )
+
+    def create_config_for_provider(
+        self,
+        provider_id: str,
+        model_name: Optional[str] = None,
+    ) -> Dict:
         if provider_id not in self.detected_providers:
-            raise ValueError(f"Provider {provider_id} not available")
-        
-        provider_info = self.detected_providers[provider_id]
-        
+            raise ValueError(
+                f"Provider {provider_id} is not available"
+            )
+
+        provider_info = self.detected_providers[
+            provider_id
+        ]
+
         if not model_name:
-            models = self.available_models.get(provider_id, [])
-            if models:
-                model_name = models[0]
-            else:
-                raise ValueError(f"No models available for {provider_id}")
-        
-        config = {
-            'llm': {
-                'provider': provider_id,
-                provider_id: {
-                    'host': provider_info['host'],
-                    'model': model_name,
-                    'temperature': 0.7,
-                    'max_tokens': 1000
-                }
-            }
+            models = self.available_models.get(
+                provider_id,
+                [],
+            )
+            if not models:
+                raise ValueError(
+                    "No models available for "
+                    f"{provider_id}"
+                )
+            model_name = models[0]
+
+        return {
+            "llm_provider": provider_id,
+            "llm_host": provider_info["host"],
+            "model": model_name,
         }
-        
-        return config
-    
-    def save_config(self, config: Dict, config_path: str = "config.yaml"):
-        """Save configuration to file."""
+
+    def save_config(
+        self,
+        config: Dict,
+        config_path: str = "config.yaml",
+    ) -> bool:
         try:
-            with open(config_path, 'w') as f:
-                yaml.dump(config, f, default_flow_style=False)
-            logger.info(f"Configuration saved to {config_path}")
+            with open(
+                config_path,
+                "w",
+                encoding="utf-8",
+            ) as handle:
+                yaml.safe_dump(
+                    config,
+                    handle,
+                    default_flow_style=False,
+                    sort_keys=True,
+                )
             return True
-        except Exception as e:
-            logger.error(f"Failed to save configuration: {e}")
+        except Exception as exc:
+            logger.error(
+                "Failed to save configuration: %s",
+                exc,
+            )
             return False
-    
-    def load_config(self, config_path: str = "config.yaml") -> Dict:
-        """Load configuration from file."""
+
+    def load_config(
+        self,
+        config_path: str = "config.yaml",
+    ) -> Dict:
         try:
-            with open(config_path, 'r') as f:
-                config = yaml.safe_load(f)
+            with open(
+                config_path,
+                "r",
+                encoding="utf-8",
+            ) as handle:
+                config = yaml.safe_load(handle)
             return config or {}
-        except Exception as e:
-            logger.error(f"Failed to load configuration: {e}")
+        except Exception as exc:
+            logger.error(
+                "Failed to load configuration: %s",
+                exc,
+            )
             return {}
-    
-    def get_installation_instructions(self, provider_id: str) -> str:
-        """Get installation instructions for a specific provider."""
+
+    def get_installation_instructions(
+        self,
+        provider_id: str,
+    ) -> str:
         instructions = {
-            'ollama': """
-1. Download Ollama from https://ollama.ai/
-2. Install and start Ollama
-3. Pull a model: ollama pull gemma3n:e2b
-4. Ollama will run on http://localhost:11434
-            """,
-            'lm_studio': """
-1. Download LM Studio from https://lmstudio.ai/
-2. Install and launch LM Studio
-3. Download a model (search for "gemma3n:e2b")
-4. Go to "Local Server" tab and click "Start Server"
-5. Server will run on http://localhost:1234
-            """,
-            'lm_studio_ci': """
-1. Install LM Studio CI (command line version)
-2. Download a model using LM Studio CI commands
-3. Start the server: lmstudio serve
-4. Server will run on http://localhost:1234
-            """,
-            'llama_cpp': """
-1. Install llama.cpp server
-2. Download a model and start the server
-3. Server will run on http://localhost:8080
-4. Configure with appropriate model path
-            """
+            "ollama": (
+                "1. Install Ollama\n"
+                "2. Start the Ollama service\n"
+                "3. Pull a compatible model\n"
+                "4. Use the default host "
+                "http://localhost:11434"
+            ),
+            "lm_studio": (
+                "1. Install and launch LM Studio\n"
+                "2. Download a local model\n"
+                "3. Start the local API server\n"
+                "4. Use the default host "
+                "http://localhost:1234"
+            ),
+            "lm_studio_ci": (
+                "1. Install the LM Studio command-line tooling\n"
+                "2. Download a local model\n"
+                "3. Start its API server\n"
+                "4. Use the default host "
+                "http://localhost:1234"
+            ),
+            "llama_cpp": (
+                "1. Build or install llama.cpp with server support\n"
+                "2. Start the server with a compatible model\n"
+                "3. Use the default host "
+                "http://localhost:8080"
+            ),
         }
-        
-        return instructions.get(provider_id, "Installation instructions not available.")
-    
-    def get_provider_info(self, provider_id: str) -> Dict:
-        """Get detailed information about a provider."""
-        if provider_id in self.providers:
-            info = self.providers[provider_id].copy()
-            info['available'] = provider_id in self.detected_providers
-            info['models'] = self.available_models.get(provider_id, [])
-            info['installation_instructions'] = self.get_installation_instructions(provider_id)
-            return info
-        else:
-            return {} 
+        return instructions.get(
+            provider_id,
+            "Installation instructions not available.",
+        )
+
+    def get_provider_info(
+        self,
+        provider_id: str,
+    ) -> Dict:
+        if provider_id not in self.providers:
+            return {}
+
+        info = self.providers[provider_id].copy()
+        info["available"] = (
+            provider_id
+            in self.detected_providers
+        )
+        info["models"] = (
+            self.available_models.get(
+                provider_id,
+                [],
+            )
+        )
+        info["installation_instructions"] = (
+            self.get_installation_instructions(
+                provider_id
+            )
+        )
+        return info
