@@ -1,158 +1,147 @@
 #!/usr/bin/env python3
-"""
-LLM Integration Module
-Handles document parsing using local LLMs via transformers
-"""
+"""Local model integration used by the MoneyPulse processing pipeline."""
 
 import logging
 import re
-from pathlib import Path
-from typing import Dict, Any, List
+from typing import Any, Dict, List
+
 import torch
 from transformers import pipeline
 
 logger = logging.getLogger(__name__)
 
+
 class LLMParser:
-    import torch
-    from transformers import pipeline
-    
-    class LLMParser:
-        def __init__(self, model_name: str = "microsoft/phi-2", ollama_host: str = "http://localhost:11434", model: str = None):
-            try:
-                if model and not model_name:
-                    model_name = model
-                    
-                self.model = model_name
-                self.ollama_host = ollama_host
-                
-                if ollama_host and model_name in ["llama", "phi", "mistral"]:
-                    logger.info(f"Using Ollama model {model_name} at {ollama_host}")
-                
-                self.generator = pipeline(
-                    "text-generation",
-                    model=model_name,
-                    device="cuda" if torch.cuda.is_available() else "cpu"
-                )
-                logger.info(f"Initialized LLM with model: {model_name}")
-            except Exception as e:
-                logger.error(f"Failed to initialize LLM: {e}")
-                raise
+    """Extract structured fields with a locally loaded Transformers model.
 
-    def parse_document(self, text: str, filename: str = None) -> Dict[str, Any]:
-        """
-        Parse document text to extract structured information.
+    `ollama_host` is retained for backwards compatibility with existing
+    configuration. Provider-specific HTTP inference is handled separately by
+    the provider-detection modules and is not performed by this class yet.
+    """
 
-        Args:
-            text: OCR-extracted text from document
-            filename: Optional source filename for logging and context
+    MODEL_ALIASES = {
+        "phi": "microsoft/phi-2",
+    }
 
-        Returns:
-            Dictionary containing extracted fields
-        """
+    def __init__(
+        self,
+        model_name: str = "microsoft/phi-2",
+        ollama_host: str = "http://localhost:11434",
+        model: str | None = None,
+    ):
+        requested_model = model or model_name
+        resolved_model = self.MODEL_ALIASES.get(requested_model, requested_model)
+
+        self.model = resolved_model
+        self.ollama_host = ollama_host
+
+        try:
+            self.generator = pipeline(
+                "text-generation",
+                model=resolved_model,
+                device="cuda" if torch.cuda.is_available() else "cpu",
+            )
+            logger.info("Initialized local Transformers model: %s", resolved_model)
+        except Exception as exc:
+            logger.error("Failed to initialize local model %s: %s", resolved_model, exc)
+            raise
+
+    def parse_document(self, text: str, filename: str | None = None) -> Dict[str, Any]:
+        """Parse document text and return the current MoneyPulse field schema."""
         try:
             chunks = self._chunk_text(text)
+            if not chunks:
+                raise ValueError("Cannot parse an empty document")
 
             structured_data = {
                 "merchant_name": "",
                 "ein_or_ssn": "",
                 "document_type": "application",
-                "address": {
-                    "street": "",
-                    "city": "",
-                    "state": "",
-                    "zip": ""
-                },
-                "contact_info": {
-                    "phone": "",
-                    "email": ""
-                },
+                "address": {"street": "", "city": "", "state": "", "zip": ""},
+                "contact_info": {"phone": "", "email": ""},
                 "business_info": {
                     "business_type": "",
                     "annual_revenue": "",
                     "years_in_business": "",
-                    "processing_volume": ""
+                    "processing_volume": "",
                 },
                 "requested_amount": "",
-                "source_file": filename if filename else "unknown",
+                "source_file": filename or "unknown",
                 "confidence_score": 0.7,
-                "flagged_issues": []
+                "flagged_issues": [],
             }
 
-            direct_fields = ["merchant_name", "ein_or_ssn", "document_type", "requested_amount"]
-            
+            direct_fields = [
+                "merchant_name",
+                "ein_or_ssn",
+                "document_type",
+                "requested_amount",
+            ]
             for field in direct_fields:
-                prompt = self._get_field_prompt(field, chunks[0])
-                response = self.generator(prompt, max_length=100, num_return_sequences=1)
-                if isinstance(response, list) and len(response) > 0:
-                    if isinstance(response[0], dict) and 'generated_text' in response[0]:
-                        structured_data[field] = self._clean_response(response[0]['generated_text'])
-                    else:
-                        structured_data[field] = self._clean_response(str(response[0]))
-                else:
-                    structured_data[field] = ""
-            
-            address_fields = ["street", "city", "state", "zip"]
-            for field in address_fields:
-                prompt = self._get_field_prompt(f"address_{field}", chunks[0])
-                response = self.generator(prompt, max_length=100, num_return_sequences=1)
-                if isinstance(response, list) and len(response) > 0:
-                    if isinstance(response[0], dict) and 'generated_text' in response[0]:
-                        structured_data["address"][field] = self._clean_response(response[0]['generated_text'])
-                    else:
-                        structured_data["address"][field] = self._clean_response(str(response[0]))
-            
-            contact_fields = ["phone", "email"]
-            for field in contact_fields:
-                prompt = self._get_field_prompt(f"contact_{field}", chunks[0])
-                response = self.generator(prompt, max_length=100, num_return_sequences=1)
-                if isinstance(response, list) and len(response) > 0:
-                    if isinstance(response[0], dict) and 'generated_text' in response[0]:
-                        structured_data["contact_info"][field] = self._clean_response(response[0]['generated_text'])
-                    else:
-                        structured_data["contact_info"][field] = self._clean_response(str(response[0]))
-            
-            business_fields = ["business_type", "annual_revenue", "years_in_business", "processing_volume"]
-            for field in business_fields:
-                prompt = self._get_field_prompt(field, chunks[0])
-                response = self.generator(prompt, max_length=100, num_return_sequences=1)
-                if isinstance(response, list) and len(response) > 0:
-                    if isinstance(response[0], dict) and 'generated_text' in response[0]:
-                        structured_data["business_info"][field] = self._clean_response(response[0]['generated_text'])
-                    else:
-                        structured_data["business_info"][field] = self._clean_response(str(response[0]))
+                structured_data[field] = self._generate_field(field, chunks[0])
+
+            for field in ["street", "city", "state", "zip"]:
+                structured_data["address"][field] = self._generate_field(
+                    f"address_{field}", chunks[0]
+                )
+
+            for field in ["phone", "email"]:
+                structured_data["contact_info"][field] = self._generate_field(
+                    f"contact_{field}", chunks[0]
+                )
+
+            for field in [
+                "business_type",
+                "annual_revenue",
+                "years_in_business",
+                "processing_volume",
+            ]:
+                structured_data["business_info"][field] = self._generate_field(
+                    field, chunks[0]
+                )
 
             logger.info("Successfully parsed document")
             return structured_data
-
-        except Exception as e:
-            logger.error(f"Error parsing document: {e}")
+        except Exception as exc:
+            logger.error("Error parsing document: %s", exc)
             raise
 
+    def _generate_field(self, field: str, text: str) -> str:
+        prompt = self._get_field_prompt(field, text)
+        response = self.generator(prompt, max_length=100, num_return_sequences=1)
+        if not response:
+            return ""
+
+        first = response[0]
+        if isinstance(first, dict) and "generated_text" in first:
+            return self._clean_response(first["generated_text"])
+        return self._clean_response(str(first))
+
     def _chunk_text(self, text: str, max_length: int = 512) -> List[str]:
-        """Split text into manageable chunks."""
-        paragraphs = text.split('\n\n')
-        chunks = []
-        current_chunk = []
+        """Split text into word-bounded chunks."""
+        paragraphs = text.split("\n\n")
+        chunks: List[str] = []
+        current_chunk: List[str] = []
         current_length = 0
 
-        for para in paragraphs:
-            para_length = len(para.split())
-            if current_length + para_length > max_length:
-                chunks.append(' '.join(current_chunk))
-                current_chunk = [para]
-                current_length = para_length
+        for paragraph in paragraphs:
+            paragraph_length = len(paragraph.split())
+            if current_length + paragraph_length > max_length and current_chunk:
+                chunks.append(" ".join(current_chunk))
+                current_chunk = [paragraph]
+                current_length = paragraph_length
             else:
-                current_chunk.append(para)
-                current_length += para_length
+                current_chunk.append(paragraph)
+                current_length += paragraph_length
 
         if current_chunk:
-            chunks.append(' '.join(current_chunk))
+            joined = " ".join(current_chunk).strip()
+            if joined:
+                chunks.append(joined)
 
         return chunks
 
     def _get_field_prompt(self, field: str, text: str) -> str:
-        """Generate appropriate prompt for each field."""
         prompts = {
             "merchant_name": f"Extract the merchant or business name from this text: {text}",
             "ein_or_ssn": f"Find the tax ID, EIN number, or SSN from this text: {text}",
@@ -167,29 +156,27 @@ class LLMParser:
             "business_type": f"What type of business is described in this text: {text}",
             "annual_revenue": f"Extract the annual revenue amount from this text: {text}",
             "years_in_business": f"How many years has this business been operating according to the text: {text}",
-            "processing_volume": f"Find the credit card processing volume from this text: {text}"
+            "processing_volume": f"Find the credit card processing volume from this text: {text}",
         }
-        return prompts.get(field, f"Extract the {field.replace('_', ' ')} from this text: {text}")
+        return prompts.get(
+            field, f"Extract the {field.replace('_', ' ')} from this text: {text}"
+        )
 
     def _clean_response(self, text: str) -> str:
-        """Clean up model response to extract relevant information."""
         if ":" in text:
             text = text.split(":")[-1]
+        return re.sub(r"\s+", " ", text.strip())
 
-        text = text.strip()
-        text = re.sub(r'\s+', ' ', text)
-
-        return text
-        
     def test_connection(self) -> bool:
-        """Test if the LLM is properly initialized and working."""
+        """Run a small generation request against the loaded model."""
         try:
-            test_prompt = "Hello, this is a test."
-            response = self.generator(test_prompt, max_length=20, num_return_sequences=1)
-            
-            logger.info(f"LLM connection test successful")
+            self.generator(
+                "Hello, this is a test.",
+                max_length=20,
+                num_return_sequences=1,
+            )
+            logger.info("Local model generation test successful")
             return True
-            
-        except Exception as e:
-            logger.error(f"LLM connection test failed: {e}")
+        except Exception as exc:
+            logger.error("Local model generation test failed: %s", exc)
             return False
