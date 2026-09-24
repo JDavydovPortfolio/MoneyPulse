@@ -1,8 +1,8 @@
-# Build directories
+# Build artifacts
 build/
 dist/
-
-# PyInstaller generated files (keep build-merchant.spec, ignore auto-generated ones)
+.build/
+*.exe
 MerchantProcessor.spec
 
 # Python
@@ -11,6 +11,12 @@ __pycache__/
 *$py.class
 *.so
 .Python
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+htmlcov/
 develop-eggs/
 downloads/
 eggs/
@@ -40,17 +46,23 @@ env/
 *.swo
 *~
 
-# Logs and output files
+# Runtime data
+input/*
+!input/.gitkeep
+!input/README.txt
+output/*
+!output/.gitkeep
+logs/*
+!logs/.gitkeep
 *.log
-logs/*.log
-output/*.json
-output/*.csv
-output/logs/*.log
 
-# Configuration files (with secrets)
+# Configuration / secrets
 config.yaml
 .env
-.env.local
+.env.*
+!.env.example
+*.pem
+*.key
 
 # Temporary files
 temp/
@@ -58,7 +70,7 @@ tmp/
 *.tmp
 *.temp
 
-# OS generated files
+# OS files
 .DS_Store
 .DS_Store?
 ._*
@@ -66,10 +78,3 @@ tmp/
 .Trashes
 ehthumbs.db
 Thumbs.db
-
-# PyInstaller executables (large files, distribute via releases)
-*.exe
-
-# Test files
-test_output/
-*.test
