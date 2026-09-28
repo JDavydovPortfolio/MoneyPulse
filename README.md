@@ -67,7 +67,7 @@ Python dependency sets are separated by purpose:
 
 ### Verification environment
 
-On 2026-09-28, all 39 deterministic tests and the synthetic OCR workflow were executed successfully on Python 3.13.5 with Tesseract 5.5.0 and Poppler 25.06.0. Other Python/platform combinations should be treated as **not yet verified by this modernization pass**, even when dependencies support them. A clean dependency installation could not be completed in the verification sandbox because outbound package-index DNS/network access was unavailable; the install commands below are therefore documented but not claimed as freshly verified there.
+On 2026-09-28, 41 headless tests and the synthetic OCR workflow were executed successfully on Python 3.13.5 with Tesseract 5.5.0 and Poppler 25.06.0. The suite includes real loopback HTTP integration coverage for both Ollama and LM Studio provider paths; the separate GUI smoke test requires the desktop dependency set. Other Python/platform combinations should be treated as **not yet verified by this modernization pass**, even when dependencies support them. A clean dependency installation could not be completed in the verification sandbox because outbound package-index DNS/network access was unavailable; the install commands below are therefore documented but not claimed as freshly verified there.
 
 ## Installation
 
