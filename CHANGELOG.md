@@ -27,6 +27,9 @@ All notable MoneyPulse changes are documented here.
 ### Reproducibility and dependencies
 
 - Added a real-Tesseract, fictional-data end-to-end demo with a deterministic fixture provider.
+- Added `scripts/verify.sh` to run compile, tests, synthetic OCR, and Bandit locally when GitHub-hosted CI is unavailable.
+- Hardened malformed provider response handling, made failed provider configuration updates atomic, and ensured local output write failures are reported as processing failures.
+- Kept processing controls disabled until stopped work has exited, and made factual human review explicit for every model extraction.
 - Expanded deterministic regression coverage for schema, parser, provider, OCR, pipeline, and CRM boundaries.
 - Split OCR/core/GUI/Transformers/CRM/dev/build dependencies into purpose-specific requirements files.
 - Corrected stale input-directory content that contained a machine-specific traceback/path.

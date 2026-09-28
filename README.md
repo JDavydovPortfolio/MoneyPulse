@@ -67,7 +67,7 @@ Python dependency sets are separated by purpose:
 
 ### Verification environment
 
-On 2026-09-28, 41 headless tests and the synthetic OCR workflow were executed successfully on Python 3.13.5 with Tesseract 5.5.0 and Poppler 25.06.0. The suite includes real loopback HTTP integration coverage for both Ollama and LM Studio provider paths; the separate GUI smoke test requires the desktop dependency set. Other Python/platform combinations should be treated as **not yet verified by this modernization pass**, even when dependencies support them. A clean dependency installation could not be completed in the verification sandbox because outbound package-index DNS/network access was unavailable; the install commands below are therefore documented but not claimed as freshly verified there.
+On 2026-09-28, the complete development dependency set installed successfully in a fresh Python 3.12.14 virtual environment. Compilation, dependency consistency (`pip check`), all **50 tests** (including offscreen GUI tests and loopback HTTP protocol tests), the synthetic OCR workflow, and Bandit all passed with Tesseract 5.3.4 and Poppler 26.05.0. Python 3.13 was not run in this environment. The loopback HTTP tests use a deterministic local fixture; they do not verify a real Gemma model. **Live Gemma inference remains unverified**: this environment has no LM Studio server, and its Ollama inference memory is too limited for the Gemma 4 model weights. Run `python examples/run_live_smoke.py` with a working local model server to verify model extraction on your machine.
 
 ## Installation
 
