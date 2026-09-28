@@ -12,9 +12,13 @@ Thanks for helping improve MoneyPulse.
 6. Run the complete relevant test suite before opening a pull request.
 
 ```bash
-python -m pip install -r requirements-dev.txt
-python -m compileall -q main.py src tests examples
-python -m pytest -q
+python scripts/verify.py
+```
+
+Before release-oriented changes are considered complete, run the isolated gate:
+
+```bash
+python scripts/verify.py --fresh
 ```
 
 OCR integration tests use generated fictional images and require Tesseract on the host. Model-provider tests use fakes and must not require a live server or large model download.

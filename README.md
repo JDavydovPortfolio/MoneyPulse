@@ -129,7 +129,7 @@ The application creates or uses:
 - `output/` for local JSON/CSV artifacts;
 - `logs/` for local runtime logs.
 
-The configuration dialog lets you choose provider, host, and model. Automatic provider/model discovery exists as a separate component and is not yet integrated directly into the main configuration dialog.
+The configuration dialog lets you choose provider, host, and model. It can auto-detect Ollama and LM Studio on their default local endpoints and select a recommended installed model; custom endpoints remain configurable manually.
 
 ## Trust boundary and schema
 
@@ -183,20 +183,27 @@ python -m pytest -q
 
 The deterministic test suite uses fakes for model-server behavior; it does not require downloading a large model or starting a live inference server. OCR integration tests use generated fictional images and require Tesseract.
 
-To run compile, tests, the synthetic OCR workflow, and Bandit locally on Linux or macOS, use the same checks as CI:
+MoneyPulse uses a repository-local release verifier rather than hosted CI as its verification source of truth. The strict release gate creates a temporary virtual environment, installs the declared desktop/development dependencies, checks dependency consistency, compiles the code, launches the GUI through the offscreen smoke tests, runs the complete test suite, executes the real-Tesseract synthetic workflow, and runs Bandit:
 
 ```bash
-bash scripts/verify.sh
+python scripts/verify.py --fresh
 ```
 
-The script uses the active Python environment (or the executable named by `PYTHON`), sets Qt to offscreen mode for headless GUI tests, and requires Tesseract plus the development dependencies from `requirements-dev.txt`. Run it with Python 3.12 and 3.13 separately to cover the GitHub Actions version matrix locally. This verifies the software without depending on GitHub Actions; it does not verify Actions itself. Passing Bandit is security-lint evidence only, not a security or compliance certification.
+Linux/macOS users can also run `bash scripts/verify.sh --fresh`; Windows PowerShell users can run `.\\scripts\\verify.ps1 --fresh`. The non-`--fresh` form uses the currently active Python environment for faster development checks.
+
+A real-model release smoke test is separate because it requires a running local model server and downloaded weights. With Gemma 4 E4B or E2B loaded in Ollama or LM Studio, run:
+
+```bash
+python scripts/verify.py --fresh --live-model auto
+```
+
+Use `--live-model ollama` or `--live-model lm_studio` to require a specific backend. Passing Bandit is security-lint evidence only, not a security or compliance certification.
 
 ## Current limitations
 
 - Extraction quality varies by OCR quality, document layout, prompts, and chosen model.
 - No fixed extraction-accuracy or speed benchmark is published.
 - A live local-model smoke test is environment-dependent and separate from deterministic tests.
-- Automatic provider/model discovery is not yet wired into the main provider dialog.
 - External CRM adapters require deployment-specific testing and credentials.
 - PyInstaller configurations are retained, but binary builds should not be treated as verified until built and tested on their target platform.
 
