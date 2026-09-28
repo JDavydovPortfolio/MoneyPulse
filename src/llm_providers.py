@@ -99,7 +99,7 @@ class OllamaProvider(LLMProvider):
 
     def test_connection(self) -> bool:
         try:
-            response = self.session.get(f"{self.host}/api/tags", timeout=5)
+            response = self.session.get(f"{self.host}/api/tags", timeout=2)
             if response.status_code != 200:
                 return False
             if not self.model or self.model == "__probe__":
@@ -151,7 +151,7 @@ class OpenAICompatibleProvider(LLMProvider):
 
     def test_connection(self) -> bool:
         try:
-            response = self.session.get(f"{self.host}/v1/models", timeout=5)
+            response = self.session.get(f"{self.host}/v1/models", timeout=2)
             if response.status_code != 200:
                 return False
             if not self.model or self.model == "__probe__":
@@ -182,7 +182,7 @@ def create_provider(
     session: Optional[requests.Session] = None,
 ) -> LLMProvider:
     """Build a provider from MoneyPulse configuration."""
-    normalized = (provider_id or "transformers").strip().lower()
+    normalized = (provider_id or "ollama").strip().lower()
     if not model and normalized != "transformers":
         raise ValueError(f"A model name is required for provider: {normalized}")
 

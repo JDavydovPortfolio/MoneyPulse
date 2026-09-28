@@ -138,3 +138,10 @@ def test_pipeline_rejects_unsupported_input_before_ocr(tmp_path):
     result = _pipeline(tmp_path).process_single_document(str(path))
     assert result["processing_status"] == "failed"
     assert "Unsupported file type" in result["error"]
+
+
+
+def test_pipeline_default_model_is_lightweight_gemma(tmp_path):
+    pipeline = DocumentPipeline(output_dir=str(tmp_path / "output"))
+    assert pipeline.llm.provider_id == "ollama"
+    assert pipeline.llm.model == "gemma3n:e2b"

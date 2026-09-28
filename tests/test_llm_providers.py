@@ -35,10 +35,10 @@ class FakeSession:
 
 def test_ollama_provider_generation():
     session = FakeSession(post_payload={"response": "  Example Merchant LLC  "})
-    provider = OllamaProvider("qwen3", session=session)
+    provider = OllamaProvider("gemma3n:e2b", session=session)
     assert provider.generate("Extract merchant name", max_tokens=32) == "Example Merchant LLC"
     assert session.last_post["url"].endswith("/api/generate")
-    assert session.last_post["json"]["model"] == "qwen3"
+    assert session.last_post["json"]["model"] == "gemma3n:e2b"
 
 
 def test_openai_compatible_provider_generation():
@@ -50,14 +50,14 @@ def test_openai_compatible_provider_generation():
 
 def test_factory_builds_http_providers_without_network_calls():
     session = FakeSession()
-    assert isinstance(create_provider("ollama", "qwen3", session=session), OllamaProvider)
+    assert isinstance(create_provider("ollama", "gemma3n:e2b", session=session), OllamaProvider)
     assert isinstance(create_provider("lm_studio", "local-model", session=session), OpenAICompatibleProvider)
     assert isinstance(create_provider("llama_cpp", "local-model", session=session), OpenAICompatibleProvider)
 
 
 def test_ollama_connection_checks_configured_model():
-    session = FakeSession(get_payload={"models": [{"name": "qwen3:4b"}]})
-    assert OllamaProvider("qwen3:4b", session=session).test_connection() is True
+    session = FakeSession(get_payload={"models": [{"name": "gemma3n:e2b"}]})
+    assert OllamaProvider("gemma3n:e2b", session=session).test_connection() is True
     assert OllamaProvider("missing-model", session=session).test_connection() is False
 
 
@@ -71,7 +71,7 @@ import pytest
 
 def test_ollama_provider_rejects_malformed_response():
     session = FakeSession(post_payload={"unexpected": "value"})
-    provider = OllamaProvider("qwen3", session=session)
+    provider = OllamaProvider("gemma3n:e2b", session=session)
     with pytest.raises(ValueError, match="response"):
         provider.generate("Extract merchant name")
 

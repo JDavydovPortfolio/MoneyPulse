@@ -11,6 +11,23 @@ from .llm_providers import DEFAULT_HOSTS, create_provider
 
 logger = logging.getLogger(__name__)
 
+RECOMMENDED_MODEL = "gemma3n:e2b"
+PRIMARY_PROVIDER_ORDER = ("ollama", "lm_studio", "lm_studio_ci", "llama_cpp")
+
+
+def _model_rank(model_name: str) -> tuple[int, str]:
+    normalized = model_name.lower().replace("_", "-")
+    compact = normalized.replace("-", "").replace("/", "").replace(":", "")
+    if normalized == RECOMMENDED_MODEL:
+        return (0, normalized)
+    if "gemma3n" in compact and "e2b" in compact:
+        return (1, normalized)
+    if "gemma3n" in compact and "e4b" in compact:
+        return (2, normalized)
+    if "gemma" in normalized:
+        return (3, normalized)
+    return (10, normalized)
+
 
 class LLMProviderDetector:
     """Detect locally running model servers and available models."""
@@ -25,10 +42,14 @@ class LLMProviderDetector:
         self.detected_providers: Dict[str, Dict] = {}
         self.available_models: Dict[str, List[str]] = {}
 
-    def detect_all_providers(self) -> Dict[str, Dict]:
+    def detect_all_providers(self, provider_ids=None) -> Dict[str, Dict]:
         logger.info("Detecting available local LLM providers")
         self.detected_providers = {}
-        for provider_id, provider_info in self.providers.items():
+        selected = provider_ids or self.providers.keys()
+        for provider_id in selected:
+            if provider_id not in self.providers:
+                continue
+            provider_info = self.providers[provider_id]
             host = provider_info["default_host"]
             try:
                 provider = create_provider(provider_id=provider_id, model="__probe__", host=host)
@@ -48,7 +69,7 @@ class LLMProviderDetector:
         host = provider_info["host"]
         endpoint = provider_info["models_endpoint"]
         try:
-            response = requests.get(f"{host}{endpoint}", timeout=10)
+            response = requests.get(f"{host}{endpoint}", timeout=3)
             response.raise_for_status()
             data = response.json()
             if provider_id == "ollama":
@@ -88,21 +109,49 @@ class LLMProviderDetector:
             }
         return status
 
+    def get_recommended_model(self, provider_id: str) -> Optional[str]:
+        models = self.available_models.get(provider_id, [])
+        if not models:
+            return None
+        return min(models, key=_model_rank)
+
     def get_recommended_provider(self) -> Optional[str]:
         if not self.detected_providers:
             return None
-        return max(self.detected_providers, key=lambda provider_id: len(self.available_models.get(provider_id, [])))
+
+        ranked = []
+        for provider_id in PRIMARY_PROVIDER_ORDER:
+            if provider_id not in self.detected_providers:
+                continue
+            model = self.get_recommended_model(provider_id)
+            model_rank = _model_rank(model)[0] if model else 99
+            ranked.append((model_rank, PRIMARY_PROVIDER_ORDER.index(provider_id), provider_id))
+
+        if not ranked:
+            return next(iter(self.detected_providers))
+        return min(ranked)[2]
 
     def create_config_for_provider(self, provider_id: str, model_name: Optional[str] = None) -> Dict:
         if provider_id not in self.detected_providers:
             raise ValueError(f"Provider {provider_id} is not available")
         provider_info = self.detected_providers[provider_id]
         if not model_name:
-            models = self.available_models.get(provider_id, [])
-            if not models:
+            model_name = self.get_recommended_model(provider_id)
+            if not model_name:
                 raise ValueError(f"No models available for {provider_id}")
-            model_name = models[0]
         return {"llm_provider": provider_id, "llm_host": provider_info["host"], "model": model_name}
+
+    def detect_recommended_config(self, provider_ids=("ollama", "lm_studio")) -> Optional[Dict]:
+        self.detect_all_providers(provider_ids=provider_ids)
+        for provider_id in self.detected_providers:
+            self.get_available_models(provider_id)
+        provider_id = self.get_recommended_provider()
+        if not provider_id:
+            return None
+        model_name = self.get_recommended_model(provider_id)
+        if not model_name:
+            return None
+        return self.create_config_for_provider(provider_id, model_name)
 
     def save_config(self, config: Dict, config_path: str = "config.yaml") -> bool:
         try:
@@ -124,8 +173,8 @@ class LLMProviderDetector:
 
     def get_installation_instructions(self, provider_id: str) -> str:
         instructions = {
-            "ollama": "1. Install Ollama\n2. Start the Ollama service\n3. Pull a compatible model\n4. Use the default host http://localhost:11434",
-            "lm_studio": "1. Install and launch LM Studio\n2. Download a local model\n3. Start the local API server\n4. Use the default host http://localhost:1234",
+            "ollama": "1. Install Ollama\n2. Start the Ollama service\n3. Run: ollama pull gemma3n:e2b\n4. Use the default host http://localhost:11434",
+            "lm_studio": "1. Install and launch LM Studio\n2. Download Gemma 3n E2B (recommended) or another compatible model\n3. Start the local API server\n4. Use the default host http://localhost:1234",
             "lm_studio_ci": "1. Install the LM Studio command-line tooling\n2. Download a local model\n3. Start its API server\n4. Use the default host http://localhost:1234",
             "llama_cpp": "1. Build or install llama.cpp with server support\n2. Start the server with a compatible model\n3. Use the default host http://localhost:8080",
         }

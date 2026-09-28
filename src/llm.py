@@ -44,10 +44,10 @@ class LLMParser:
 
     def __init__(
         self,
-        model_name: str = "microsoft/phi-2",
+        model_name: str = "gemma3n:e2b",
         ollama_host: Optional[str] = None,
         model: Optional[str] = None,
-        provider: str = "transformers",
+        provider: str = "ollama",
         host: Optional[str] = None,
         provider_instance: Optional[LLMProvider] = None,
     ):

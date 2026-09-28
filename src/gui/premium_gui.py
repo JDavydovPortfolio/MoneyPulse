@@ -12,6 +12,7 @@ import qtawesome as qta
 import qdarkstyle
 
 from src.pipeline import DocumentPipeline
+from src.llm_detector import LLMProviderDetector, RECOMMENDED_MODEL
 
 class DocumentProcessorWorker(QThread):
     """Worker thread for document processing to keep UI responsive."""
@@ -144,7 +145,7 @@ class PremiumDocumentProcessor(QMainWindow):
             config = {
                 'llm_provider': 'ollama',
                 'llm_host': 'http://localhost:11434',
-                'model': 'qwen3:4b',
+                'model': RECOMMENDED_MODEL,
                 'tesseract_path': None
             }
             self.pipeline = DocumentPipeline(output_dir="output", config=config)
@@ -569,13 +570,14 @@ class PremiumDocumentProcessor(QMainWindow):
         dialog.resize(460, 320)
 
         layout = QVBoxLayout(dialog)
+        detector = LLMProviderDetector()
 
         model_group = QGroupBox("Local Model Settings")
         model_layout = QFormLayout(model_group)
 
         provider_combo = QComboBox()
         provider_combo.addItem("Transformers (in-process)", "transformers")
-        provider_combo.addItem("Ollama", "ollama")
+        provider_combo.addItem("Ollama (recommended)", "ollama")
         provider_combo.addItem("LM Studio", "lm_studio")
         provider_combo.addItem("llama.cpp", "llama_cpp")
 
@@ -593,7 +595,7 @@ class PremiumDocumentProcessor(QMainWindow):
         )
         host_edit.setPlaceholderText("Local provider endpoint")
         model_edit = QLineEdit(
-            self.pipeline.config.get('model', 'qwen3:4b')
+            self.pipeline.config.get('model', RECOMMENDED_MODEL)
         )
 
         provider_defaults = {
@@ -629,15 +631,46 @@ class PremiumDocumentProcessor(QMainWindow):
         )
         sync_provider_fields()
 
+        def detect_local_ai():
+            config = detector.detect_recommended_config(
+                provider_ids=("ollama", "lm_studio")
+            )
+            if not config:
+                QMessageBox.warning(
+                    dialog,
+                    "No Local AI Detected",
+                    "MoneyPulse could not find a running Ollama or LM Studio server with an available model.\n\n"
+                    "Recommended setup: Ollama with Gemma 3n E2B (gemma3n:e2b), or LM Studio with a Gemma 3n E2B model loaded and its local API server started."
+                )
+                return
+
+            for index in range(provider_combo.count()):
+                if provider_combo.itemData(index) == config["llm_provider"]:
+                    provider_combo.setCurrentIndex(index)
+                    break
+            host_edit.setText(config["llm_host"])
+            model_edit.setText(config["model"])
+            QMessageBox.information(
+                dialog,
+                "Local AI Detected",
+                f"Provider: {config['llm_provider']}\nModel: {config['model']}"
+            )
+
+        detect_button = QPushButton("Auto-detect Ollama / LM Studio")
+        detect_button.clicked.connect(detect_local_ai)
+
         model_layout.addRow("Provider:", provider_combo)
         model_layout.addRow("Host:", host_edit)
         model_layout.addRow("Model:", model_edit)
+        model_layout.addRow("", detect_button)
 
         layout.addWidget(model_group)
 
         note = QLabel(
-            "MoneyPulse keeps model inference local when a local backend is "
-            "selected. Optional CRM integrations may still make network calls."
+            "Recommended lightweight default: Gemma 3n E2B. Ollama and LM Studio are both "
+            "first-class local backends. Advanced users can select another compatible model; "
+            "MoneyPulse does not depend on one model family. Optional CRM integrations may still "
+            "make network calls when explicitly configured."
         )
         note.setWordWrap(True)
         layout.addWidget(note)
