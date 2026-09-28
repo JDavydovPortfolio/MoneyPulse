@@ -145,3 +145,35 @@ def test_pipeline_default_model_is_lightweight_gemma(tmp_path):
     pipeline = DocumentPipeline(output_dir=str(tmp_path / "output"))
     assert pipeline.llm.provider_id == "ollama"
     assert pipeline.llm.model == "gemma4:e4b"
+
+
+def test_failed_config_update_preserves_working_pipeline(tmp_path):
+    import pytest
+    import pytesseract
+    pipeline = _pipeline(tmp_path)
+    previous_config = dict(pipeline.config)
+    previous_llm = pipeline.llm
+    previous_ocr = pipeline.ocr
+    previous_command = pytesseract.pytesseract.tesseract_cmd
+    with pytest.raises(ValueError, match="Unsupported LLM provider"):
+        pipeline.update_config({"llm_provider": "invalid", "tesseract_path": "/invalid/tesseract"})
+    assert pipeline.config == previous_config
+    assert pipeline.llm is previous_llm
+    assert pipeline.ocr is previous_ocr
+    assert pytesseract.pytesseract.tesseract_cmd == previous_command
+
+
+def test_output_failure_is_not_reported_as_completed(tmp_path, monkeypatch):
+    image_path = tmp_path / "synthetic.png"
+    _synthetic_image(image_path)
+    pipeline = _pipeline(tmp_path)
+    import builtins
+    real_open = builtins.open
+    def reject_output_write(file, mode="r", *args, **kwargs):
+        if "w" in mode and str(file).endswith(".json"):
+            raise PermissionError("Output directory is not writable")
+        return real_open(file, mode, *args, **kwargs)
+    monkeypatch.setattr(builtins, "open", reject_output_write)
+    result = pipeline.process_single_document(str(image_path))
+    assert result["processing_status"] == "failed"
+    assert "not writable" in result["error"]

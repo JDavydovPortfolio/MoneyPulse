@@ -65,7 +65,8 @@ class DocumentValidator:
         all_issues = list(dict.fromkeys([*existing_issues, *validation_issues]))
         parsed_data["flagged_issues"] = all_issues
         parsed_data["validation_status"] = "failed" if validation_issues else "passed"
-        parsed_data["requires_human_review"] = bool(all_issues)
+        # Structural/domain checks cannot certify factual model accuracy.
+        parsed_data["requires_human_review"] = True
         parsed_data["review_approved"] = False
         if validation_issues:
             parsed_data["review_state"] = "needs_correction"

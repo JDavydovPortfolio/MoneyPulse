@@ -372,14 +372,9 @@ class PremiumDocumentProcessor(QMainWindow):
         """Stop document processing."""
         if self.worker_thread and self.worker_thread.isRunning():
             self.worker_thread.requestInterruption()
-            self.worker_thread.wait(3000)
-            
-            self.process_btn.setEnabled(True)
             self.stop_btn.setEnabled(False)
-            self.progress_bar.setVisible(False)
-            
-            self.status_bar.showMessage("Processing stopped")
-            self.log_message("Processing stopped by user")
+            self.status_bar.showMessage("Stopping after the current document finishes")
+            self.log_message("Stop requested; waiting for the current document")
     
     def update_progress(self, current: int, total: int, message: str):
         """Update progress bar and status."""
@@ -688,7 +683,11 @@ class PremiumDocumentProcessor(QMainWindow):
                 'llm_host': host_edit.text().strip(),
                 'model': model_edit.text().strip()
             }
-            self.pipeline.update_config(new_config)
+            try:
+                self.pipeline.update_config(new_config)
+            except Exception as exc:
+                QMessageBox.warning(self, "Configuration Error", str(exc))
+                return
             self.log_message(
                 "Local model configuration updated: "
                 f"{new_config['llm_provider']} / {new_config['model']}"
@@ -740,7 +739,9 @@ class PremiumDocumentProcessor(QMainWindow):
             
             if reply == QMessageBox.Yes:
                 self.stop_processing()
-                event.accept()
+                # Keep the worker alive until its pending request has returned.
+                self.worker_thread.finished.connect(self.close)
+                event.ignore()
             else:
                 event.ignore()
         else:

@@ -26,7 +26,7 @@ def valid_document():
 def test_valid_document_passes_without_fake_confidence():
     result = DocumentValidator().validate_document(valid_document())
     assert result["validation_status"] == "passed"
-    assert result["requires_human_review"] is False
+    assert result["requires_human_review"] is True
     assert result["review_state"] == "ready_for_review"
     assert result["review_approved"] is False
     assert "confidence_score" not in result

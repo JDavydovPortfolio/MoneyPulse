@@ -23,10 +23,11 @@ class DocumentPipeline:
         if not self.logger.handlers:
             self._setup_logging()
 
-    def _build_llm(self) -> LLMParser:
-        provider = self.config.get("llm_provider", "ollama")
-        host = self.config.get("llm_host") or self.config.get("ollama_host")
-        model = self.config.get("model", "gemma4:e4b")
+    def _build_llm(self, config=None) -> LLMParser:
+        config = self.config if config is None else config
+        provider = config.get("llm_provider", "ollama")
+        host = config.get("llm_host") or config.get("ollama_host")
+        model = config.get("model", "gemma4:e4b")
         return LLMParser(provider=provider, host=host, model=model)
 
     def process_directory(self, input_dir: str, progress_callback=None) -> List[Dict]:
@@ -75,6 +76,8 @@ class DocumentPipeline:
             completed_at = datetime.now(timezone.utc)
             validated_data["processing_timestamp"] = completed_at.isoformat()
             output_result = self.crm.submit_document(validated_data)
+            if output_result.get("status") == "failed":
+                raise RuntimeError(output_result.get("error", "Local output preparation failed"))
 
             return {
                 **validated_data,
@@ -182,8 +185,13 @@ class DocumentPipeline:
         self.logger.setLevel(logging.DEBUG)
 
     def update_config(self, new_config: Dict):
-        self.config.update(new_config)
-        if "tesseract_path" in new_config:
-            self.ocr = OCRProcessor(tesseract_path=self.config["tesseract_path"])
+        candidate = {**self.config, **new_config}
+        ocr = self.ocr
+        llm = self.llm
         if {"llm_provider", "llm_host", "ollama_host", "model"}.intersection(new_config):
-            self.llm = self._build_llm()
+            llm = self._build_llm(candidate)
+        if "tesseract_path" in new_config:
+            ocr = OCRProcessor(tesseract_path=candidate["tesseract_path"])
+        self.config = candidate
+        self.ocr = ocr
+        self.llm = llm

@@ -87,3 +87,13 @@ def test_openai_compatible_provider_rejects_malformed_response():
 def test_factory_rejects_unknown_provider():
     with pytest.raises(ValueError, match="Unsupported LLM provider"):
         create_provider("not-real", "model")
+
+
+@pytest.mark.parametrize("content", [{"name": "invented"}, ["invented"], 123, True])
+def test_http_providers_reject_non_text_generation(content):
+    ollama = OllamaProvider("fixture", session=FakeSession(post_payload={"response": content}))
+    studio = OpenAICompatibleProvider("fixture", "http://localhost:1234", session=FakeSession(
+        post_payload={"choices": [{"message": {"content": content}}]}))
+    for provider in (ollama, studio):
+        with pytest.raises(ValueError, match="text"):
+            provider.generate("Extract name")

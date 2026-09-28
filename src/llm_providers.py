@@ -93,10 +93,12 @@ class OllamaProvider(LLMProvider):
             data = response.json()
         except (requests.RequestException, ValueError) as exc:
             raise RuntimeError(f"Ollama request failed at {self.host}: {exc}") from exc
-        text = data.get("response")
+        text = data.get("response") if isinstance(data, dict) else None
         if text is None:
             raise ValueError("Ollama response did not include a 'response' field")
-        return str(text).strip()
+        if not isinstance(text, str):
+            raise ValueError("Ollama response must contain text")
+        return text.strip()
 
     def test_connection(self) -> bool:
         try:
@@ -148,7 +150,9 @@ class OpenAICompatibleProvider(LLMProvider):
             raise ValueError("OpenAI-compatible response did not include message content") from exc
         if content is None:
             raise ValueError("OpenAI-compatible provider returned empty message content")
-        return str(content).strip()
+        if not isinstance(content, str):
+            raise ValueError("OpenAI-compatible message content must be text")
+        return content.strip()
 
     def test_connection(self) -> bool:
         try:
