@@ -46,7 +46,7 @@ For the easiest setup, MoneyPulse recommends **Gemma 4 E4B** while keeping the e
 The desktop configuration dialog includes **Auto-detect Ollama / LM Studio**. Advanced users can select another compatible local model without changing Python source code.
 
 
-The desktop application defaults to Ollama with `gemma4:e4b`, a lightweight Gemma 3n instruction model intended for local devices. MoneyPulse does not pull model weights automatically. If the configured provider or model is unavailable, component checks and processing fail explicitly rather than silently substituting data.
+The desktop application defaults to Ollama with `gemma4:e4b`, a lightweight Gemma 4 instruction model intended for local devices. MoneyPulse does not pull model weights automatically. If the configured provider or model is unavailable, component checks and processing fail explicitly rather than silently substituting data.
 
 ## Requirements
 

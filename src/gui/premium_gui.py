@@ -640,7 +640,7 @@ class PremiumDocumentProcessor(QMainWindow):
                     dialog,
                     "No Local AI Detected",
                     "MoneyPulse could not find a running Ollama or LM Studio server with an available model.\n\n"
-                    "Recommended setup: Ollama with Gemma 4 E4B (gemma3n:e2b), or LM Studio with a Gemma 4 E4B model loaded and its local API server started."
+                    "Recommended setup: Ollama with Gemma 4 E4B (gemma4:e4b), or LM Studio with a Gemma 4 E4B model loaded and its local API server started."
                 )
                 return
 
