@@ -18,7 +18,7 @@ def test_desktop_window_initializes_offscreen(tmp_path, monkeypatch):
 
     assert window.windowTitle().startswith("MoneyPulse")
     assert window.pipeline.llm.provider_id == "ollama"
-    assert window.pipeline.llm.model == "gemma4:e4b"
+    assert window.pipeline.llm.model == "gemma4:e2b-it-qat"
     assert window.process_btn.isEnabled() is False
 
     window.close()

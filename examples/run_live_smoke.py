@@ -15,16 +15,33 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from examples.run_synthetic_demo import _load_font
-from src.llm_detector import RECOMMENDED_MODEL
+from src.llm_detector import LLMProviderDetector
 from src.pipeline import DocumentPipeline
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--provider", choices=("ollama", "lm_studio"), default="ollama")
-    parser.add_argument("--model", default=RECOMMENDED_MODEL)
+    parser.add_argument("--model", help="Model identifier; auto-selects the recommended installed model when omitted")
     parser.add_argument("--host", help="Local API endpoint; uses provider default when omitted")
     args = parser.parse_args()
+
+    model = args.model
+    if not model:
+        detector = LLMProviderDetector()
+        provider_info = detector.providers[args.provider].copy()
+        provider_info["host"] = (args.host or provider_info["default_host"]).rstrip("/")
+        detector.detected_providers[args.provider] = provider_info
+        detector.get_available_models(args.provider)
+        model = detector.get_recommended_model(args.provider)
+        if not model:
+            print(json.dumps({
+                "passed": False,
+                "error": "No installed model could be auto-selected for the configured provider",
+                "provider": args.provider,
+            }, indent=2))
+            return 1
+
     output = ROOT / "output" / "live_smoke"
     output.mkdir(parents=True, exist_ok=True)
     source = (ROOT / "examples" / "synthetic_merchant_application.txt").read_text()
@@ -36,11 +53,11 @@ def main():
     image_path = output / "synthetic_application.png"
     image.save(image_path)
     pipeline = DocumentPipeline(str(output), {
-        "llm_provider": args.provider, "model": args.model, "llm_host": args.host,
+        "llm_provider": args.provider, "model": model, "llm_host": args.host,
     })
     if not pipeline.llm.test_connection():
         print(json.dumps({"passed": False, "error": "Configured provider/model is unavailable",
-                          "provider": args.provider, "model": args.model}, indent=2))
+                          "provider": args.provider, "model": model}, indent=2))
         return 1
     started = time.monotonic()
     result = pipeline.process_single_document(str(image_path))
@@ -54,7 +71,7 @@ def main():
         "unapproved": result.get("review_approved") is False,
         "local_only": result.get("output_result", {}).get("destination") == "local_only",
     }
-    summary = {"provider": args.provider, "model": args.model,
+    summary = {"provider": args.provider, "model": model,
                "elapsed_seconds": round(time.monotonic() - started, 2),
                "passed": all(checks.values()), "checks": checks,
                "error": result.get("error"), "result": result}

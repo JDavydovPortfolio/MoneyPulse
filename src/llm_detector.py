@@ -11,7 +11,7 @@ from .llm_providers import DEFAULT_HOSTS, create_provider
 
 logger = logging.getLogger(__name__)
 
-RECOMMENDED_MODEL = "gemma4:e4b"
+RECOMMENDED_MODEL = "gemma4:e2b-it-qat"
 RECOMMENDED_FALLBACK_MODEL = "gemma4:e2b"
 PRIMARY_PROVIDER_ORDER = ("ollama", "lm_studio", "lm_studio_ci", "llama_cpp")
 
@@ -21,20 +21,22 @@ def _model_rank(model_name: str) -> tuple[int, str]:
     compact = normalized.replace("-", "").replace("/", "").replace(":", "")
     if normalized == RECOMMENDED_MODEL:
         return (0, normalized)
-    if normalized == RECOMMENDED_FALLBACK_MODEL:
+    if "gemma4" in compact and "e2b" in compact and "qat" in compact:
         return (1, normalized)
-    if "gemma4" in compact and "e4b" in compact:
+    if normalized == RECOMMENDED_FALLBACK_MODEL:
         return (2, normalized)
     if "gemma4" in compact and "e2b" in compact:
         return (3, normalized)
-    if "gemma4" in compact:
+    if "gemma4" in compact and "e4b" in compact:
         return (4, normalized)
-    if "gemma3n" in compact and "e4b" in compact:
+    if "gemma4" in compact:
         return (5, normalized)
     if "gemma3n" in compact and "e2b" in compact:
         return (6, normalized)
-    if "gemma" in normalized:
+    if "gemma3n" in compact and "e4b" in compact:
         return (7, normalized)
+    if "gemma" in normalized:
+        return (8, normalized)
     return (10, normalized)
 
 
@@ -182,8 +184,8 @@ class LLMProviderDetector:
 
     def get_installation_instructions(self, provider_id: str) -> str:
         instructions = {
-            "ollama": "1. Install Ollama\n2. Start the Ollama service\n3. Run: ollama pull gemma4:e4b\n4. Use the default host http://localhost:11434",
-            "lm_studio": "1. Install and launch LM Studio\n2. Download Gemma 4 E4B (recommended), Gemma 4 E2B for lower-memory systems, or another compatible model\n3. Start the local API server\n4. Use the default host http://localhost:1234",
+            "ollama": "1. Install Ollama\n2. Start the Ollama service\n3. Run: ollama pull gemma4:e2b-it-qat\n4. Use the default host http://localhost:11434",
+            "lm_studio": "1. Install and launch LM Studio\n2. Download Gemma 4 E2B QAT (recommended; Q4_0 verified) or another compatible local model\n3. Start the local API server\n4. Use the default host http://localhost:1234",
             "lm_studio_ci": "1. Install the LM Studio command-line tooling\n2. Download a local model\n3. Start its API server\n4. Use the default host http://localhost:1234",
             "llama_cpp": "1. Build or install llama.cpp with server support\n2. Start the server with a compatible model\n3. Use the default host http://localhost:8080",
         }

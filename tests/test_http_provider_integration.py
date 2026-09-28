@@ -64,10 +64,10 @@ class ProviderHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path == "/api/tags":
-            self._send_json({"models": [{"name": "gemma4:e4b"}]})
+            self._send_json({"models": [{"name": "gemma4:e2b-it-qat"}]})
             return
         if self.path == "/v1/models":
-            self._send_json({"data": [{"id": "google/gemma-4-e4b"}]})
+            self._send_json({"data": [{"id": "gemma-4-e2b-it-qat@q4_0"}]})
             return
         self._send_json({"error": "not found"}, status=404)
 
@@ -120,13 +120,13 @@ Coffee Shop annual revenue $525,000, 4 years in business, processing volume $48,
 
 def test_real_ollama_http_path_extracts_structured_fields():
     with _provider_server() as host:
-        parser = LLMParser(provider="ollama", host=host, model="gemma4:e4b")
+        parser = LLMParser(provider="ollama", host=host, model="gemma4:e2b-it-qat")
         result = parser.parse_document(DOCUMENT_TEXT, "synthetic.txt")
 
     assert result["merchant_name"] == FIELD_VALUES["merchant_name"]
     assert result["requested_amount"] == FIELD_VALUES["requested_amount"]
     assert result["llm_provider"] == "ollama"
-    assert result["llm_model"] == "gemma4:e4b"
+    assert result["llm_model"] == "gemma4:e2b-it-qat"
     generate_payloads = [payload for path, payload in ProviderHandler.request_payloads if path == "/api/generate"]
     assert generate_payloads
     assert all(payload["think"] is False for payload in generate_payloads)
@@ -135,13 +135,13 @@ def test_real_ollama_http_path_extracts_structured_fields():
 
 def test_real_lm_studio_http_path_extracts_structured_fields():
     with _provider_server() as host:
-        parser = LLMParser(provider="lm_studio", host=host, model="google/gemma-4-e4b")
+        parser = LLMParser(provider="lm_studio", host=host, model="gemma-4-e2b-it-qat@q4_0")
         result = parser.parse_document(DOCUMENT_TEXT, "synthetic.txt")
 
     assert result["merchant_name"] == FIELD_VALUES["merchant_name"]
     assert result["requested_amount"] == FIELD_VALUES["requested_amount"]
     assert result["llm_provider"] == "lm_studio"
-    assert result["llm_model"] == "google/gemma-4-e4b"
+    assert result["llm_model"] == "gemma-4-e2b-it-qat@q4_0"
     chat_payloads = [payload for path, payload in ProviderHandler.request_payloads if path == "/api/v1/chat"]
     assert chat_payloads
     assert all(payload["temperature"] == 0.0 for payload in chat_payloads)

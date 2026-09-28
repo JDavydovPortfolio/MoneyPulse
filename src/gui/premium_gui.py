@@ -635,7 +635,7 @@ class PremiumDocumentProcessor(QMainWindow):
                     dialog,
                     "No Local AI Detected",
                     "MoneyPulse could not find a running Ollama or LM Studio server with an available model.\n\n"
-                    "Recommended setup: Ollama with Gemma 4 E4B (gemma4:e4b), or LM Studio with a Gemma 4 E4B model loaded and its local API server started."
+                    "Recommended setup: Ollama with Gemma 4 E2B QAT (gemma4:e2b-it-qat), or LM Studio with a Gemma 4 E2B QAT model loaded and its local API server started."
                 )
                 return
 
@@ -662,7 +662,7 @@ class PremiumDocumentProcessor(QMainWindow):
         layout.addWidget(model_group)
 
         note = QLabel(
-            "Recommended local default: Gemma 4 E4B (Gemma 4 E2B is the lower-memory fallback). Ollama and LM Studio are both "
+            "Recommended local default: Gemma 4 E2B QAT (verified through Ollama and LM Studio). Ollama and LM Studio are both "
             "first-class local backends. Advanced users can select another compatible model; "
             "MoneyPulse does not depend on one model family. Optional CRM integrations may still "
             "make network calls when explicitly configured."

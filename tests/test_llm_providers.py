@@ -35,10 +35,10 @@ class FakeSession:
 
 def test_ollama_provider_generation():
     session = FakeSession(post_payload={"response": "  Example Merchant LLC  "})
-    provider = OllamaProvider("gemma4:e4b", session=session)
+    provider = OllamaProvider("gemma4:e2b-it-qat", session=session)
     assert provider.generate("Extract merchant name", max_tokens=32) == "Example Merchant LLC"
     assert session.last_post["url"].endswith("/api/generate")
-    assert session.last_post["json"]["model"] == "gemma4:e4b"
+    assert session.last_post["json"]["model"] == "gemma4:e2b-it-qat"
     assert session.last_post["json"]["think"] is False
 
 
@@ -84,14 +84,14 @@ def test_lm_studio_provider_falls_back_when_native_api_is_unavailable():
 
 def test_factory_builds_http_providers_without_network_calls():
     session = FakeSession()
-    assert isinstance(create_provider("ollama", "gemma4:e4b", session=session), OllamaProvider)
+    assert isinstance(create_provider("ollama", "gemma4:e2b-it-qat", session=session), OllamaProvider)
     assert isinstance(create_provider("lm_studio", "local-model", session=session), LMStudioProvider)
     assert isinstance(create_provider("llama_cpp", "local-model", session=session), OpenAICompatibleProvider)
 
 
 def test_ollama_connection_checks_configured_model():
-    session = FakeSession(get_payload={"models": [{"name": "gemma4:e4b"}]})
-    assert OllamaProvider("gemma4:e4b", session=session).test_connection() is True
+    session = FakeSession(get_payload={"models": [{"name": "gemma4:e2b-it-qat"}]})
+    assert OllamaProvider("gemma4:e2b-it-qat", session=session).test_connection() is True
     assert OllamaProvider("missing-model", session=session).test_connection() is False
 
 
@@ -105,7 +105,7 @@ import pytest
 
 def test_ollama_provider_rejects_malformed_response():
     session = FakeSession(post_payload={"unexpected": "value"})
-    provider = OllamaProvider("gemma4:e4b", session=session)
+    provider = OllamaProvider("gemma4:e2b-it-qat", session=session)
     with pytest.raises(ValueError, match="response"):
         provider.generate("Extract merchant name")
 

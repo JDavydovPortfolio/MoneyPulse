@@ -144,7 +144,7 @@ def test_pipeline_rejects_unsupported_input_before_ocr(tmp_path):
 def test_pipeline_default_model_is_lightweight_gemma(tmp_path):
     pipeline = DocumentPipeline(output_dir=str(tmp_path / "output"))
     assert pipeline.llm.provider_id == "ollama"
-    assert pipeline.llm.model == "gemma4:e4b"
+    assert pipeline.llm.model == "gemma4:e2b-it-qat"
 
 
 def test_failed_config_update_preserves_working_pipeline(tmp_path):

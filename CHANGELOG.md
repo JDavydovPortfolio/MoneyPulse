@@ -22,7 +22,7 @@ All notable MoneyPulse changes are documented here.
 - Added explicit file/type/corrupt-image OCR failures and clearer Tesseract/Poppler guidance.
 - Strengthened local-provider connection checks so configured model availability is checked when possible.
 - Switched the desktop default away from an in-process model that could trigger a large download at startup.
-- Set the beginner-friendly default to Ollama + Gemma 4 E4B, with Gemma 4 E2B as the lower-memory fallback, while preserving provider-independent extraction and first-class LM Studio support.
+- Set the beginner-friendly default to the verified Gemma 4 E2B QAT path, with provider-specific model auto-selection for Ollama and LM Studio; larger compatible models remain optional.
 - Removed the unused legacy `llm_optional.py` parser path with its incompatible schema.
 
 ### Reproducibility and dependencies

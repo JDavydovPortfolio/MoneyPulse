@@ -2,7 +2,7 @@
 
 MoneyPulse is an experimental, local-first financial-document processing pipeline for Merchant Cash Advance (MCA) and related operational workflows. It combines OCR, configurable local model extraction, deterministic schema/domain validation, reviewable local output, and optional CRM adapters.
 
-> **Status:** active modernization. MoneyPulse is not an underwriting, compliance-certification, or autonomous financial-decision system. Extracted values remain untrusted until deterministic validation and human review are complete.
+> **Status:** modernization complete for the current release scope. MoneyPulse remains experimental and is not an underwriting, compliance-certification, or autonomous financial-decision system. Extracted values remain untrusted until deterministic validation and human review are complete.
 
 ## Why it exists
 
@@ -38,15 +38,14 @@ The default pipeline prepares local artifacts. It does not automatically transmi
 
 ### Recommended local AI setup
 
-For the easiest setup, MoneyPulse recommends **Gemma 4 E4B** while keeping the extraction layer provider-independent. **Gemma 4 E2B** is the lower-memory fallback when E4B is too heavy for the host. The application supports both primary local-server workflows:
+For the easiest setup, MoneyPulse recommends **Gemma 4 E2B QAT** because that smaller model has been verified end-to-end through both Ollama and LM Studio. Tesseract performs OCR; the local model's job is to map OCR text into MoneyPulse's structured schema. The extraction layer remains provider-independent.
 
-- **Ollama:** run `ollama pull gemma4:e4b`, start Ollama, and keep the default endpoint `http://localhost:11434`.
-- **LM Studio:** download a Gemma 4 E4B-compatible model, start LM Studio's local API server, and use `http://localhost:1234`. MoneyPulse can auto-detect the model identifier exposed by LM Studio.
+- **Ollama:** run `ollama pull gemma4:e2b-it-qat`, start Ollama, and keep the default endpoint `http://localhost:11434`.
+- **LM Studio:** download a Gemma 4 E2B QAT GGUF (the Q4_0 variant was verified), start LM Studio's local API server, and use `http://localhost:1234`. MoneyPulse auto-detects the model identifier exposed by LM Studio.
 
-The desktop configuration dialog includes **Auto-detect Ollama / LM Studio**. Advanced users can select another compatible local model without changing Python source code.
+The desktop configuration dialog includes **Auto-detect Ollama / LM Studio**. Advanced users can select another compatible local model, including larger Gemma variants, without changing Python source code.
 
-
-The desktop application defaults to Ollama with `gemma4:e4b`, a lightweight Gemma 4 instruction model intended for local devices. MoneyPulse does not pull model weights automatically. If the configured provider or model is unavailable, component checks and processing fail explicitly rather than silently substituting data.
+The desktop application defaults to Ollama with `gemma4:e2b-it-qat`. MoneyPulse does not pull model weights automatically. If the configured provider or model is unavailable, component checks and processing fail explicitly rather than silently substituting data.
 
 ## Requirements
 
@@ -67,7 +66,7 @@ Python dependency sets are separated by purpose:
 
 ### Verification environment
 
-On 2026-09-28, the repository's `--fresh` verifier created temporary Python **3.12.14** and **3.13.15** environments, installed the complete development/desktop dependency set, passed `pip check`, compiled the code, passed all **50 tests** (including offscreen GUI tests), ran the real-Tesseract synthetic workflow, and passed Bandit on both versions. After the LM Studio provider changes, a fresh Python **3.12.14** run passed `pip check`, compileall, all **53 tests**, the real-Tesseract synthetic workflow, and Bandit. Tesseract 5.3.4 and Poppler 26.05.0 were installed on the host. A live Ollama smoke test with **Gemma 4 E2B QAT** (`gemma4:e2b-it-qat`) passed in 30.41 seconds. **Gemma 4 E2B QAT Q4_0** (`gemma-4-e2b-it-qat@q4_0`) passed the full real-Tesseract OCR-to-validation smoke test through LM Studio in 57.71 seconds. Both live runs matched merchant, requested amount, and email; deterministic validation passed, review remained unapproved, and output stayed local. The currently recommended **E4B default** remains unverified. To repeat the LM Studio test, load that model, start the LM Studio local API server, then run `python examples/run_live_smoke.py --provider lm_studio --model 'gemma-4-e2b-it-qat@q4_0'`.
+On 2026-09-28, fresh Python **3.12.14** and **3.13.15** verifier runs installed the complete development/desktop dependency set, passed `pip check`, compiled the code, passed all **53 tests**, ran the real-Tesseract synthetic workflow, and passed Bandit. Tesseract 5.3.4 and Poppler 26.05.0 were installed on the host. A live Ollama smoke test with **Gemma 4 E2B QAT** (`gemma4:e2b-it-qat`) passed in 30.41 seconds. **Gemma 4 E2B QAT Q4_0** (`gemma-4-e2b-it-qat@q4_0`) passed the full real-Tesseract OCR-to-validation smoke test through LM Studio in 57.71 seconds. Both live runs matched merchant, requested amount, and email; deterministic validation passed, review remained unapproved, and output stayed local.
 
 ## Installation
 
@@ -191,7 +190,7 @@ python scripts/verify.py --fresh
 
 Linux/macOS users can also run `bash scripts/verify.sh --fresh`; Windows PowerShell users can run `.\\scripts\\verify.ps1 --fresh`. The non-`--fresh` form uses the currently active Python environment for faster development checks.
 
-A real-model release smoke test is separate because it requires a running local model server and downloaded weights. With the default Gemma 4 E4B loaded in Ollama or LM Studio, run:
+A real-model release smoke test is separate because it requires a running local model server and downloaded weights. With a compatible local model loaded in Ollama or LM Studio, run:
 
 ```bash
 python scripts/verify.py --fresh --live-model auto

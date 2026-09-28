@@ -202,17 +202,19 @@ class LLMProviderWidget(QWidget):
                 for model in models:
                     self.model_combo.addItem(model)
                 if models:
-                    self.model_combo.setCurrentText(models[0])
+                    selected_model = self.detector.get_recommended_model(recommended) or models[0]
+                    self.model_combo.setCurrentText(selected_model)
                     self.current_provider = recommended
-                    self.current_model = models[0]
+                    self.current_model = selected_model
         elif provider_id in self.detector.detected_providers:
             models = self.detector.available_models.get(provider_id, [])
             for model in models:
                 self.model_combo.addItem(model)
             if models:
-                self.model_combo.setCurrentText(models[0])
+                selected_model = self.detector.get_recommended_model(provider_id) or models[0]
+                self.model_combo.setCurrentText(selected_model)
                 self.current_provider = provider_id
-                self.current_model = models[0]
+                self.current_model = selected_model
         else:
             self.model_combo.addItem("No models available")
             self.current_provider = None
@@ -284,7 +286,7 @@ class LLMProviderWidget(QWidget):
         <ol>
         <li>Choose your preferred provider from the list above</li>
         <li>Follow the installation instructions for your chosen provider</li>
-        <li>Download and load a model (recommended: gemma4:e4b)</li>
+        <li>Download and load a model (recommended: Gemma 4 E2B QAT)</li>
         <li>Start the provider's server</li>
         <li>Click "Refresh Detection" in this dialog</li>
         <li>Select your provider and model from the dropdowns</li>

@@ -24,9 +24,19 @@ def test_detector_recognizes_lm_studio_gemma_gguf_name():
     _mark_detected(detector, "lm_studio", "http://localhost:1234")
     detector.available_models["lm_studio"] = [
         "some-other-model",
-        "google/gemma-4-e4b",
+        "gemma-4-e2b-it-qat@q4_0",
     ]
-    assert detector.get_recommended_model("lm_studio") == "google/gemma-4-e4b"
+    assert detector.get_recommended_model("lm_studio") == "gemma-4-e2b-it-qat@q4_0"
+
+
+def test_detector_prefers_verified_e2b_qat_over_larger_e4b():
+    detector = LLMProviderDetector()
+    _mark_detected(detector, "lm_studio", "http://localhost:1234")
+    detector.available_models["lm_studio"] = [
+        "google/gemma-4-e4b",
+        "gemma-4-e2b-it-qat@q4_0",
+    ]
+    assert detector.get_recommended_model("lm_studio") == "gemma-4-e2b-it-qat@q4_0"
 
 
 def test_detector_prefers_provider_with_gemma_over_provider_with_more_models():
@@ -34,7 +44,7 @@ def test_detector_prefers_provider_with_gemma_over_provider_with_more_models():
     _mark_detected(detector, "ollama", "http://localhost:11434")
     _mark_detected(detector, "lm_studio", "http://localhost:1234")
     detector.available_models["ollama"] = ["model-a", "model-b", "model-c"]
-    detector.available_models["lm_studio"] = ["google/gemma-4-e4b"]
+    detector.available_models["lm_studio"] = ["gemma-4-e2b-it-qat@q4_0"]
     assert detector.get_recommended_provider() == "lm_studio"
 
 
@@ -43,7 +53,7 @@ def test_detector_prefers_ollama_when_both_have_recommended_gemma():
     _mark_detected(detector, "ollama", "http://localhost:11434")
     _mark_detected(detector, "lm_studio", "http://localhost:1234")
     detector.available_models["ollama"] = [RECOMMENDED_MODEL]
-    detector.available_models["lm_studio"] = ["google/gemma-4-e4b"]
+    detector.available_models["lm_studio"] = ["gemma-4-e2b-it-qat@q4_0"]
     assert detector.get_recommended_provider() == "ollama"
 
 
