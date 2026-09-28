@@ -183,7 +183,13 @@ python -m pytest -q
 
 The deterministic test suite uses fakes for model-server behavior; it does not require downloading a large model or starting a live inference server. OCR integration tests use generated fictional images and require Tesseract.
 
-The repository also contains a Bandit workflow. Passing Bandit is security-lint evidence only; it is not a security or compliance certification.
+To run compile, tests, the synthetic OCR workflow, and Bandit locally on Linux or macOS, use the same checks as CI:
+
+```bash
+bash scripts/verify.sh
+```
+
+The script uses the active Python environment (or the executable named by `PYTHON`), sets Qt to offscreen mode for headless GUI tests, and requires Tesseract plus the development dependencies from `requirements-dev.txt`. Run it with Python 3.12 and 3.13 separately to cover the GitHub Actions version matrix locally. This verifies the software without depending on GitHub Actions; it does not verify Actions itself. Passing Bandit is security-lint evidence only, not a security or compliance certification.
 
 ## Current limitations
 
