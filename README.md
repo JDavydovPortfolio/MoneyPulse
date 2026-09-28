@@ -67,7 +67,7 @@ Python dependency sets are separated by purpose:
 
 ### Verification environment
 
-On 2026-09-28, the complete development dependency set installed successfully in a fresh Python 3.12.14 virtual environment. Compilation, dependency consistency (`pip check`), all **50 tests** (including offscreen GUI tests and loopback HTTP protocol tests), the synthetic OCR workflow, and Bandit all passed with Tesseract 5.3.4 and Poppler 26.05.0. Python 3.13 was not run in this environment. The loopback HTTP tests use a deterministic local fixture; they do not verify a real Gemma model. **Live Gemma inference remains unverified**: this environment has no LM Studio server, and its Ollama inference memory is too limited for the Gemma 4 model weights. Run `python examples/run_live_smoke.py` with a working local model server to verify model extraction on your machine.
+On 2026-09-28, the repository's `--fresh` verifier created a temporary Python 3.12.14 environment, installed the complete development/desktop dependency set, passed `pip check`, compiled the code, passed all **50 tests** (including offscreen GUI tests), ran the real-Tesseract synthetic workflow, and passed Bandit. Tesseract 5.3.4 and Poppler 26.05.0 were installed on the host. Python 3.13 was not run in this environment. A live Ollama smoke test with **Gemma 4 E2B QAT** (`gemma4:e2b-it-qat`) also passed in 30.41 seconds: merchant, amount, and email extraction matched the fictional source, deterministic validation passed, review remained unapproved, and output stayed local. This verifies one real Gemma 4 model on Ollama; the recommended **E4B default** and live LM Studio inference remain unverified. To repeat the tested configuration, run `python examples/run_live_smoke.py --provider ollama --model gemma4:e2b-it-qat` with Ollama running and that model installed.
 
 ## Installation
 
@@ -191,7 +191,7 @@ python scripts/verify.py --fresh
 
 Linux/macOS users can also run `bash scripts/verify.sh --fresh`; Windows PowerShell users can run `.\\scripts\\verify.ps1 --fresh`. The non-`--fresh` form uses the currently active Python environment for faster development checks.
 
-A real-model release smoke test is separate because it requires a running local model server and downloaded weights. With Gemma 4 E4B or E2B loaded in Ollama or LM Studio, run:
+A real-model release smoke test is separate because it requires a running local model server and downloaded weights. With the default Gemma 4 E4B loaded in Ollama or LM Studio, run:
 
 ```bash
 python scripts/verify.py --fresh --live-model auto
