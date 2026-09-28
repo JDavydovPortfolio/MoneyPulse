@@ -13,7 +13,6 @@ import shutil
 import subprocess
 import sys
 import tempfile
-import venv
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -93,7 +92,9 @@ def verify_fresh(live_model: str | None) -> None:
     with tempfile.TemporaryDirectory(prefix="moneypulse-verify-") as temp_dir:
         venv_dir = Path(temp_dir) / ".venv"
         print(f"Creating isolated verification environment at {venv_dir}", flush=True)
-        venv.EnvBuilder(with_pip=True, clear=True).create(venv_dir)
+        # Invoke venv through the active interpreter. This matches the normal
+        # `python -m venv` workflow and supports relocatable builds such as uv's.
+        run([sys.executable, "-m", "venv", str(venv_dir)])
         python = venv_python(venv_dir)
 
         run([str(python), "-m", "pip", "install", "-r", "requirements-dev.txt"])

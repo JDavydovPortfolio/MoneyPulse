@@ -28,6 +28,7 @@ All notable MoneyPulse changes are documented here.
 
 - Added a real-Tesseract, fictional-data end-to-end demo with a deterministic fixture provider.
 - Added a cross-platform local release verifier (`scripts/verify.py` with Bash and PowerShell wrappers) that can create a fresh temporary environment, run GUI/OCR/tests/security linting, and optionally smoke-test a real Gemma 4 model through Ollama or LM Studio.
+- Created verifier environments through the active interpreter's `python -m venv`, covering relocatable Python distributions such as uv-managed runtimes.
 - Removed GitHub Actions workflows so hosted runners are no longer part of the MoneyPulse release gate.
 - Hardened malformed provider response handling, made failed provider configuration updates atomic, and ensured local output write failures are reported as processing failures.
 - Kept processing controls disabled until stopped work has exited, and made factual human review explicit for every model extraction.
