@@ -1,42 +1,35 @@
 # Contributing to MoneyPulse
 
-Thanks for your interest in improving MoneyPulse.
+Thanks for helping improve MoneyPulse.
 
 ## Development setup
 
 1. Fork or clone the repository.
-2. Create a virtual environment.
-3. Install the dependencies needed for the part of the project you are changing.
+2. Create and activate a virtual environment.
+3. Install `requirements-dev.txt` or the narrower dependency set needed for your change.
 4. Create a focused branch.
-5. Add or update tests when behavior changes.
-6. Open a pull request describing what changed and why.
-
-For the lightweight validation test suite:
+5. Add/update deterministic tests for behavior changes.
+6. Run the complete relevant test suite before opening a pull request.
 
 ```bash
-pip install pytest
-python -m compileall -q main.py src
+python -m pip install -r requirements-dev.txt
+python -m compileall -q main.py src tests examples
 python -m pytest -q
 ```
 
+OCR integration tests use generated fictional images and require Tesseract on the host. Model-provider tests use fakes and must not require a live server or large model download.
+
 ## Contribution guidelines
 
-- Keep pull requests focused.
-- Do not commit real merchant, applicant, banking, tax-ID, or other sensitive financial data.
-- Use synthetic or redacted fixtures in tests and examples.
-- Do not add fixed performance, accuracy, compliance, or security claims without reproducible evidence.
-- Treat model output as untrusted input and preserve deterministic validation/human-review paths.
-- Avoid making cloud services mandatory for the core local-first workflow.
-- Document new environment variables, external services, and network behavior.
+- Keep changes focused and reviewable.
+- Never commit real merchant/applicant documents, credentials, tax IDs, bank data, generated outputs, or logs.
+- Use synthetic/redacted fixtures only.
+- Treat all model output as untrusted and preserve structural validation, domain validation, provenance, and human-review boundaries.
+- Do not allow validation/review failures to flow automatically to external integrations.
+- Do not add fixed speed, accuracy, privacy, compliance, or security claims without reproducible evidence.
+- Keep hosted/cloud AI optional; local operation must remain viable.
+- Document new external services, credentials, network behavior, and system dependencies.
 
 ## Issues
 
-Bug reports should include:
-
-- Python and operating-system version;
-- the relevant MoneyPulse commit/tag;
-- steps to reproduce;
-- expected versus actual behavior;
-- sanitized logs or synthetic sample data when useful.
-
-Never post credentials or real financial documents in a public issue.
+Bug reports should include the commit/tag, Python/OS versions, reproducible steps, expected versus actual behavior, and sanitized logs/fixtures where useful. Never post secrets or real financial documents publicly.

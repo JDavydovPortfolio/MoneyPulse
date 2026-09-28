@@ -142,9 +142,9 @@ class PremiumDocumentProcessor(QMainWindow):
         """Initialize the document processing pipeline."""
         try:
             config = {
-                'llm_provider': 'transformers',
-                'llm_host': '',
-                'model': 'microsoft/phi-2',
+                'llm_provider': 'ollama',
+                'llm_host': 'http://localhost:11434',
+                'model': 'qwen3:4b',
                 'tesseract_path': None
             }
             self.pipeline = DocumentPipeline(output_dir="output", config=config)
@@ -475,15 +475,17 @@ class PremiumDocumentProcessor(QMainWindow):
         self.validation_list.clear()
         
         validation_status = result.get('validation_status', 'unknown')
-        confidence = result.get('confidence_score', 0.0)
+        review_state = result.get('review_state', 'unreviewed')
         
         status_item = QListWidgetItem(f"Overall Status: {validation_status.upper()}")
         status_item.setIcon(qta.icon('fa5s.check-circle' if validation_status == 'passed' else 'fa5s.exclamation-triangle'))
         self.validation_list.addItem(status_item)
         
-        confidence_item = QListWidgetItem(f"Confidence Score: {confidence:.2%}")
-        confidence_item.setIcon(qta.icon('fa5s.chart-line'))
-        self.validation_list.addItem(confidence_item)
+        review_item = QListWidgetItem(
+            f"Review State: {review_state.replace('_', ' ').title()}"
+        )
+        review_item.setIcon(qta.icon('fa5s.user-check'))
+        self.validation_list.addItem(review_item)
         
         issues = result.get('flagged_issues', [])
         if issues:
@@ -578,7 +580,7 @@ class PremiumDocumentProcessor(QMainWindow):
         provider_combo.addItem("llama.cpp", "llama_cpp")
 
         current_provider = self.pipeline.config.get(
-            'llm_provider', 'transformers'
+            'llm_provider', 'ollama'
         )
         for index in range(provider_combo.count()):
             if provider_combo.itemData(index) == current_provider:
@@ -591,7 +593,7 @@ class PremiumDocumentProcessor(QMainWindow):
         )
         host_edit.setPlaceholderText("Local provider endpoint")
         model_edit = QLineEdit(
-            self.pipeline.config.get('model', 'microsoft/phi-2')
+            self.pipeline.config.get('model', 'qwen3:4b')
         )
 
         provider_defaults = {
@@ -663,9 +665,9 @@ class PremiumDocumentProcessor(QMainWindow):
         """Show about dialog."""
         QMessageBox.about(
             self,
-            "About Merchant Document Processor",
+            "About MoneyPulse",
             """
-            <h3>Merchant Document Processing Suite</h3>
+            <h3>MoneyPulse</h3>
             <p>Version 1.0.0</p>
             
             <p>An automated document processing pipeline that:</p>

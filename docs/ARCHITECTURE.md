@@ -1,98 +1,89 @@
 # MoneyPulse Architecture
 
-MoneyPulse is organized as a local-first document-processing pipeline. The design separates document extraction, model inference, validation, and downstream integration so each layer can be tested or replaced independently.
+MoneyPulse is a local-first document-processing pipeline with explicit boundaries between source extraction, untrusted model output, deterministic validation, review, and optional downstream transmission.
 
 ## Processing flow
 
 ```mermaid
 flowchart TD
     A[PDF / image input] --> B[OCRProcessor]
-    B --> C[LLMParser]
-    C --> D[LLMProvider]
-    D --> D1[Transformers]
-    D --> D2[Ollama]
-    D --> D3[LM Studio]
-    D --> D4[llama.cpp]
-    C --> E[DocumentValidator]
-    E --> F{Human review needed?}
-    F -->|Yes| G[Review / correction]
-    F -->|No| H[Structured result]
-    G --> H
-    H --> I[JSON / CSV]
-    H --> J[Optional CRM integration]
+    B --> C[Source text]
+    C --> D[LLMParser]
+    D --> E[LLMProvider]
+    E --> E1[Ollama]
+    E --> E2[LM Studio]
+    E --> E3[llama.cpp]
+    E --> E4[Transformers optional]
+    D --> F[Versioned extraction + provenance]
+    F --> G[Structural schema validation]
+    G --> H[Domain validation]
+    H --> I{Review state}
+    I --> J[Local JSON / CSV]
+    I --> K{Explicit approval?}
+    K -->|No| L[External transmission blocked]
+    K -->|Yes, validated + approved| M[Optional CRM adapter]
 ```
 
-## Major components
+## Components
 
 ### `src/ocr.py`
 
-Converts PDFs and supported image formats into text using Tesseract OCR. PDF rendering is handled through `pdf2image`.
+Validates input paths and extensions, renders PDFs with Poppler through `pdf2image`, preprocesses images with OpenCV, and extracts text with Tesseract. Missing files, unsupported types, corrupt images, and missing OCR tooling fail explicitly.
 
 ### `src/llm_providers.py`
 
-Defines the common inference interface. Current providers are:
-
-- in-process Hugging Face Transformers;
-- Ollama;
-- LM Studio through its OpenAI-compatible local API;
-- llama.cpp through an OpenAI-compatible local API.
-
-HTTP providers default to localhost endpoints and can be pointed at a different host through configuration.
+Defines the model-provider interface. Local HTTP providers use explicit request timeouts and reject malformed response shapes. Provider connection tests also verify the configured model when the backend exposes a model list. The Transformers dependency is loaded only when that provider is selected.
 
 ### `src/llm.py`
 
-Builds field-specific prompts and maps model responses into the MoneyPulse document schema. It records the provider and model used for each parsed document.
+Splits source text into word-bounded chunks and attempts each expected field across chunks. It records the raw response attempts used for provenance. Response cleanup strips only recognized field/answer prefixes, preserving legitimate colons inside values.
 
-### `src/llm_detector.py`
+### `src/schema.py`
 
-Discovers supported local HTTP model servers, lists available models, tests a selected model, and produces pipeline-compatible configuration.
+Defines extraction schema version `1.0` and validates exact expected fields, nested types, review metadata, and provenance. Unexpected/missing schema elements fail closed rather than being silently coerced.
 
 ### `src/validator.py`
 
-Applies deterministic validation after model extraction. Validation issues are preserved as review flags rather than silently ignored.
+Runs structural validation first, followed by deterministic domain checks for fields such as EIN/SSN, ZIP code, amount, phone, email, state, required fields, and partial addresses. It produces explicit review state without inventing model confidence.
 
 ### `src/pipeline.py`
 
-Coordinates OCR, model extraction, validation, output generation, and CRM submission. Successful results retain the extracted OCR text, processing metadata, provider, and model.
+Coordinates OCR, parsing, validation, and local output. A validation failure remains a reviewable completed extraction; a structural/provider/OCR exception returns an explicit failed processing result.
 
 ### `src/crm_submit.py`
 
-Produces local JSON/CSV output and contains optional integration paths for external CRM systems. The default submission behavior remains a development/mock workflow.
+The core `CRMSubmitter` creates local artifacts only. It does not simulate external acceptance or generate fake CRM IDs. `EnterpriseCRMSubmitter` is an optional adapter and blocks network transmission until deterministic validation has passed and explicit human approval is present.
 
 ### `src/gui/`
 
-Contains the PySide6 desktop interface. The configuration dialog exposes local provider, host, and model selection.
+Contains the PySide6 desktop interface and a separate provider-discovery widget. The main configuration dialog supports the provider IDs consumed by the pipeline. Provider discovery remains separate to avoid coupling startup to scanning local services.
 
-## Trust boundaries
+## Trust boundary
 
-Model output is treated as untrusted input. The intended flow is:
+The intended boundary is:
 
-1. extract source text;
-2. ask a local model for structured fields;
-3. validate deterministic formats and required fields;
-4. flag questionable output for human review;
-5. only then prepare downstream output.
+```text
+OCR text (source evidence)
+    -> model response (untrusted)
+    -> parsed extraction (untrusted)
+    -> schema validation
+    -> domain validation
+    -> review state
+    -> local output
+    -> explicit human approval
+    -> optional external integration
+```
 
-The model does not decide whether an applicant should receive financing.
+A model response never becomes trusted merely because it parsed successfully. Schema validation rejects unexpected structure, and domain validation does not turn an extraction into a credit/funding decision.
+
+## Provenance
+
+Extraction provenance records source file, provider/model, document chunk count, and raw field attempts. This helps a reviewer distinguish source/model behavior from validated values. Default CRM-shaped local output deliberately omits raw model-response provenance to avoid unnecessarily propagating model text downstream.
 
 ## Privacy boundaries
 
-MoneyPulse can keep OCR and model inference local, but "local-first" is not the same as a guarantee that every deployment is offline.
+Local-first is not a guarantee of an offline deployment. Network access can occur for package/model downloads, non-local model endpoints, or approved CRM integrations. Operators remain responsible for endpoint exposure, credentials, filesystem permissions, retention, backups, and logs.
 
-Network activity can occur when:
+## Optional dependency boundaries
 
-- Python packages or model weights are downloaded;
-- a configured model endpoint is not bound to localhost;
-- an external CRM integration is enabled.
-
-Deployers are responsible for access controls, log retention, model-server exposure, backups, and credentials.
-
-## Current modernization direction
-
-The project is moving toward:
-
-- schema-validated model output;
-- synthetic reproducible test fixtures;
-- stronger OCR-independent integration tests;
-- clearer provider discovery inside the main desktop UI;
-- measured benchmarks instead of fixed marketing claims.
+The default application does not require the in-process Transformers stack or enterprise SOAP/OAuth packages. Optional dependencies are separated into dedicated requirements files so unused integrations do not break the core application at import time.

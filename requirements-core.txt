@@ -1,0 +1,4 @@
+# Headless MoneyPulse pipeline with OCR and local HTTP model providers.
+-r requirements-minimal.txt
+requests>=2.31.0
+PyYAML>=6.0.1

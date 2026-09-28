@@ -1,28 +1,22 @@
 @echo off
-echo Building MerchantProcessor executable...
-echo This may take several minutes...
-echo.
+setlocal
 
-REM Clean previous builds
+echo Building MoneyPulse local-provider desktop executable...
+echo This build does not bundle the optional Transformers model stack.
+
 if exist build rmdir /s /q build
 if exist dist rmdir /s /q dist
-if exist MerchantProcessor.spec del MerchantProcessor.spec
 
-REM Build with optimized settings
-echo Starting PyInstaller build...
-pyinstaller --onefile --windowed --name="MerchantProcessor" --exclude-module matplotlib --exclude-module IPython --exclude-module jupyter --exclude-module pytest --exclude-module tensorboard --exclude-module torch.utils.tensorboard main.py
-
-if exist dist\MerchantProcessor.exe (
-    echo.
-    echo ✅ Build successful!
-    echo 📁 Executable: dist\MerchantProcessor.exe
-    echo 💾 Size: ~2.5 GB
-    echo.
-    echo The executable includes all dependencies and can run on any Windows machine.
-) else (
-    echo.
-    echo ❌ Build failed! Check the output above for errors.
+pyinstaller build-lightweight.spec
+if errorlevel 1 (
+    echo Build failed. Review the PyInstaller output above.
+    exit /b 1
 )
 
-echo.
-pause
+if exist dist\MoneyPulse-Local.exe (
+    echo Build completed: dist\MoneyPulse-Local.exe
+    echo Test the executable on the intended target system before distributing it.
+) else (
+    echo Build command completed but expected executable was not found.
+    exit /b 1
+)

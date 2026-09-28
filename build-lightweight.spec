@@ -1,34 +1,31 @@
 # -*- mode: python ; coding: utf-8 -*-
+"""PyInstaller spec for MoneyPulse using local HTTP model providers.
 
-# Lightweight build - excludes heavy AI dependencies
-# Results in ~100-200 MB executable instead of 2.5 GB
+This configuration intentionally excludes the optional in-process Transformers stack.
+It has not been verified as a distributable binary by the current modernization pass.
+"""
 
-import sys
 from pathlib import Path
 
 block_cipher = None
-
-# Define the main script
-main_script = 'main.py'
-
-# Data files to include
-added_files = [
-    ('input', 'input'),
-]
-
-# Minimal hidden imports (no PyTorch/Transformers)
+main_script = "main.py"
+added_files = [("input", "input"), ("README.md", "."), ("LICENSE", ".")]
 hidden_imports = [
-    'PySide6.QtCore',
-    'PySide6.QtGui', 
-    'PySide6.QtWidgets',
-    'pytesseract',
-    'PIL',
-    'PIL.Image',
-    'pdf2image',
-    'requests',
+    "PySide6.QtCore",
+    "PySide6.QtGui",
+    "PySide6.QtWidgets",
+    "pytesseract",
+    "cv2",
+    "numpy",
+    "PIL",
+    "PIL.Image",
+    "pdf2image",
+    "requests",
+    "yaml",
+    "qtawesome",
+    "qdarkstyle",
 ]
 
-# Analysis phase
 a = Analysis(
     [main_script],
     pathex=[],
@@ -38,35 +35,13 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[
-        # Exclude the heavy dependencies
-        'torch',
-        'torchvision', 
-        'transformers',
-        'sentence_transformers',
-        'numpy',  # Only if not needed for other features
-        'opencv-python',
-        'cv2',
-        'pandas',
-        'pyqtgraph',
-        'matplotlib',
-        'IPython',
-        'jupyter',
-        'pytest',
-        'tensorboard',
-        'torch.utils.tensorboard',
-        'tensorflow',  # In case it's pulled in
-    ],
+    excludes=["torch", "transformers", "sentence_transformers", "pandas", "pyqtgraph"],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,
     noarchive=False,
 )
-
-# Remove duplicate entries
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
-
-# Create executable
 exe = EXE(
     pyz,
     a.scripts,
@@ -74,18 +49,18 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='MerchantProcessor-Lite',
+    name="MoneyPulse-Local",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=False,  # Set to False for windowed app
+    console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='resources/app_icon.ico' if Path('resources/app_icon.ico').exists() else None,
+    icon="resources/app_icon.ico" if Path("resources/app_icon.ico").exists() else None,
 )

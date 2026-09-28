@@ -1,14 +1,20 @@
 # Synthetic examples
 
-This directory contains intentionally synthetic inputs for demonstrating MoneyPulse without exposing real merchant or applicant data.
+Everything in this directory is fictional demonstration data. Do not replace these files with real merchant/applicant documents or credentials.
 
-The files here are **not** real submissions and should not be interpreted as financial, legal, or underwriting records.
+## Deterministic end-to-end demo
 
-To try a sample:
+`run_synthetic_demo.py` creates a fictional PNG, performs real local Tesseract OCR, uses a deterministic fixture provider instead of a live LLM, passes the extraction through schema/domain validation, and writes local output.
 
-1. install the MoneyPulse dependencies;
-2. configure a supported local model;
-3. copy a synthetic document into `input/` or select it from the desktop application;
-4. review the generated output and validation flags.
+From the repository root:
 
-Real financial documents, tax identifiers, account numbers, credentials, and customer records should never be committed to this repository.
+```bash
+python -m pip install -r requirements-core.txt
+python examples/run_synthetic_demo.py
+```
+
+The fixture provider exists only to make the pipeline reproducible without a model download/server. It does not measure or claim LLM accuracy.
+
+## Text fixture
+
+`synthetic_merchant_application.txt` is a human-readable fictional data fixture useful for parser/test development. The desktop intake path accepts PDF/PNG/JPG/JPEG, not plain text.

@@ -1,35 +1,9 @@
-# Core document processing
-pytesseract>=0.3.10
-pdf2image>=1.16.3
-opencv-python>=4.8.1.78
-Pillow>=10.1.0
-requests>=2.31.0
-numpy>=1.26.0
-PyYAML>=6.0.1
+# Full desktop application using the default local HTTP provider path.
+-r requirements-core.txt
 
-# Local model integration
---find-links https://download.pytorch.org/whl/torch_stable.html
-torch>=2.0.0
-transformers>=4.36.0
-sentence-transformers>=2.2.2
-protobuf>=4.25.1
-tokenizers>=0.15.0
-safetensors>=0.4.1
-
-# Desktop GUI
 PySide6>=6.6.0
-PySide6-Addons>=6.6.0
 qtawesome>=1.2.3
 qdarkstyle>=3.2.3
-pyqtgraph>=0.13.3
 
-# Utilities
-python-dotenv>=1.0.0
-pyinstaller>=6.0.0
-tqdm>=4.66.1
-colorama>=0.4.6
-pandas>=2.1.0
-
-# Optional enterprise CRM integration
-requests-oauthlib>=1.3.0
-zeep>=4.1.0
+# In-process Hugging Face Transformers support is optional; see requirements-transformers.txt.
+# Enterprise CRM dependencies are optional; see requirements-crm.txt.

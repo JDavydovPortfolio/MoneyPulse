@@ -1,35 +1,25 @@
 # Security Policy
 
-MoneyPulse processes data that may be financially sensitive. Please treat security and privacy issues with care.
+MoneyPulse can process financially sensitive data. Treat security and privacy issues accordingly.
 
-## Supported versions
+## Supported code
 
-The project is currently undergoing modernization. Security fixes are applied to the latest code on `main` unless a release explicitly states otherwise.
+Security fixes apply to the latest code on `main` unless a release explicitly states otherwise.
 
 ## Reporting a vulnerability
 
-Please do **not** include secrets, credentials, real merchant documents, tax identifiers, bank-account information, or other sensitive data in a public GitHub issue.
+Do **not** include credentials, secrets, real merchant/applicant documents, tax identifiers, bank data, or exploit details containing sensitive data in a public issue.
 
-For a vulnerability report, use GitHub's private vulnerability reporting feature if it is enabled for this repository. If private reporting is unavailable, open a minimal public issue requesting a private contact channel without publishing exploit details or sensitive data.
+Use GitHub private vulnerability reporting when available. If it is unavailable, open only a minimal public request for a private contact channel.
 
-A useful report includes:
+A useful private report includes the affected commit/tag, component, synthetic reproduction steps, impact, and remediation ideas if known.
 
-- affected commit/tag;
-- vulnerable component;
-- reproducible steps using synthetic data;
-- expected impact;
-- suggested remediation, if known.
+## Trust boundaries
 
-## Deployment notes
+Model output is untrusted. The application enforces structural schema validation before domain validation and review state. External CRM transmission is intended to require successful deterministic validation plus explicit human approval.
 
-MoneyPulse is not a security or compliance certification. Operators are responsible for securing:
+These controls reduce accidental propagation of malformed model output; they are not a guarantee against every security or data-quality failure.
 
-- local model runtimes;
-- document storage;
-- logs and generated outputs;
-- credentials and configuration;
-- networked CRM integrations;
-- operating-system access controls;
-- backups and retention.
+## Deployment responsibilities
 
-Model output should be treated as untrusted until validated.
+MoneyPulse is not a security/compliance certification. Operators are responsible for securing local model servers, file permissions, generated output, logs, credentials/configuration, external CRM endpoints, backups, retention, and operating-system access controls.

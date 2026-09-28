@@ -16,16 +16,10 @@ class LLMProvider(ABC):
         self.model = model
 
     @abstractmethod
-    def generate(
-        self,
-        prompt: str,
-        max_tokens: int = 128,
-        temperature: float = 0.0,
-    ) -> str:
+    def generate(self, prompt: str, max_tokens: int = 128, temperature: float = 0.0) -> str:
         """Generate text for a prompt."""
 
     def test_connection(self) -> bool:
-        """Return whether the provider is ready to accept generation requests."""
         try:
             self.generate("Reply with OK.", max_tokens=8, temperature=0.0)
             return True
@@ -37,35 +31,23 @@ class LLMProvider(ABC):
 class TransformersProvider(LLMProvider):
     """In-process Hugging Face Transformers backend."""
 
-    MODEL_ALIASES = {
-        "phi": "microsoft/phi-2",
-    }
+    MODEL_ALIASES = {"phi": "microsoft/phi-2"}
 
     def __init__(self, model: str = "microsoft/phi-2"):
         resolved_model = self.MODEL_ALIASES.get(model, model)
         super().__init__(resolved_model)
-
         try:
             import torch
             from transformers import pipeline
         except ImportError as exc:
             raise RuntimeError(
-                "Transformers provider requires torch and transformers."
+                "Transformers provider requires the optional Transformers dependencies. "
+                "Install requirements-transformers.txt."
             ) from exc
-
         device = 0 if torch.cuda.is_available() else -1
-        self._generator = pipeline(
-            "text-generation",
-            model=self.model,
-            device=device,
-        )
+        self._generator = pipeline("text-generation", model=self.model, device=device)
 
-    def generate(
-        self,
-        prompt: str,
-        max_tokens: int = 128,
-        temperature: float = 0.0,
-    ) -> str:
+    def generate(self, prompt: str, max_tokens: int = 128, temperature: float = 0.0) -> str:
         kwargs: Dict[str, Any] = {
             "max_new_tokens": max_tokens,
             "num_return_sequences": 1,
@@ -73,17 +55,11 @@ class TransformersProvider(LLMProvider):
         }
         if temperature > 0:
             kwargs["temperature"] = temperature
-
         response = self._generator(prompt, **kwargs)
         if not response:
-            return ""
-
+            raise ValueError("Transformers provider returned an empty response")
         first = response[0]
-        generated = (
-            first.get("generated_text", "")
-            if isinstance(first, dict)
-            else str(first)
-        )
+        generated = first.get("generated_text", "") if isinstance(first, dict) else str(first)
         if generated.startswith(prompt):
             generated = generated[len(prompt):]
         return generated.strip()
@@ -95,106 +71,99 @@ class TransformersProvider(LLMProvider):
 class OllamaProvider(LLMProvider):
     """Ollama HTTP backend."""
 
-    def __init__(
-        self,
-        model: str,
-        host: str = "http://localhost:11434",
-        session: Optional[requests.Session] = None,
-    ):
+    def __init__(self, model: str, host: str = "http://localhost:11434", session: Optional[requests.Session] = None):
         super().__init__(model)
         self.host = host.rstrip("/")
         self.session = session or requests.Session()
 
-    def generate(
-        self,
-        prompt: str,
-        max_tokens: int = 128,
-        temperature: float = 0.0,
-    ) -> str:
-        response = self.session.post(
-            f"{self.host}/api/generate",
-            json={
-                "model": self.model,
-                "prompt": prompt,
-                "stream": False,
-                "options": {
-                    "temperature": temperature,
-                    "num_predict": max_tokens,
+    def generate(self, prompt: str, max_tokens: int = 128, temperature: float = 0.0) -> str:
+        try:
+            response = self.session.post(
+                f"{self.host}/api/generate",
+                json={
+                    "model": self.model,
+                    "prompt": prompt,
+                    "stream": False,
+                    "options": {"temperature": temperature, "num_predict": max_tokens},
                 },
-            },
-            timeout=60,
-        )
-        response.raise_for_status()
-        data = response.json()
+                timeout=60,
+            )
+            response.raise_for_status()
+            data = response.json()
+        except (requests.RequestException, ValueError) as exc:
+            raise RuntimeError(f"Ollama request failed at {self.host}: {exc}") from exc
         text = data.get("response")
         if text is None:
-            raise ValueError(
-                "Ollama response did not include a 'response' field"
-            )
+            raise ValueError("Ollama response did not include a 'response' field")
         return str(text).strip()
 
     def test_connection(self) -> bool:
         try:
-            response = self.session.get(
-                f"{self.host}/api/tags",
-                timeout=5,
-            )
-            return response.status_code == 200
-        except requests.RequestException:
+            response = self.session.get(f"{self.host}/api/tags", timeout=5)
+            if response.status_code != 200:
+                return False
+            if not self.model or self.model == "__probe__":
+                return True
+            data = response.json()
+            names = {
+                str(item.get("name") or item.get("model"))
+                for item in data.get("models", [])
+                if item.get("name") or item.get("model")
+            }
+            return self.model in names
+        except (requests.RequestException, ValueError, TypeError):
             return False
 
 
 class OpenAICompatibleProvider(LLMProvider):
     """Local OpenAI-compatible HTTP backend used by LM Studio and llama.cpp."""
 
-    def __init__(
-        self,
-        model: str,
-        host: str,
-        session: Optional[requests.Session] = None,
-    ):
+    def __init__(self, model: str, host: str, session: Optional[requests.Session] = None):
         super().__init__(model)
         self.host = host.rstrip("/")
         self.session = session or requests.Session()
 
-    def generate(
-        self,
-        prompt: str,
-        max_tokens: int = 128,
-        temperature: float = 0.0,
-    ) -> str:
-        response = self.session.post(
-            f"{self.host}/v1/chat/completions",
-            json={
-                "model": self.model,
-                "messages": [
-                    {"role": "user", "content": prompt}
-                ],
-                "temperature": temperature,
-                "max_tokens": max_tokens,
-                "stream": False,
-            },
-            headers={"Content-Type": "application/json"},
-            timeout=60,
-        )
-        response.raise_for_status()
-        data = response.json()
+    def generate(self, prompt: str, max_tokens: int = 128, temperature: float = 0.0) -> str:
+        try:
+            response = self.session.post(
+                f"{self.host}/v1/chat/completions",
+                json={
+                    "model": self.model,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": temperature,
+                    "max_tokens": max_tokens,
+                    "stream": False,
+                },
+                headers={"Content-Type": "application/json"},
+                timeout=60,
+            )
+            response.raise_for_status()
+            data = response.json()
+        except (requests.RequestException, ValueError) as exc:
+            raise RuntimeError(f"OpenAI-compatible request failed at {self.host}: {exc}") from exc
         try:
             content = data["choices"][0]["message"]["content"]
         except (KeyError, IndexError, TypeError) as exc:
-            raise ValueError(
-                "OpenAI-compatible response did not include message content"
-            ) from exc
+            raise ValueError("OpenAI-compatible response did not include message content") from exc
+        if content is None:
+            raise ValueError("OpenAI-compatible provider returned empty message content")
         return str(content).strip()
 
     def test_connection(self) -> bool:
         try:
-            response = self.session.get(
-                f"{self.host}/v1/models",
-                timeout=5,
-            )
-            return response.status_code == 200
-        except requests.RequestException:
+            response = self.session.get(f"{self.host}/v1/models", timeout=5)
+            if response.status_code != 200:
+                return False
+            if not self.model or self.model == "__probe__":
+                return True
+            data = response.json()
+            names = {
+                str(item.get("id"))
+                for item in data.get("data", [])
+                if item.get("id")
+            }
+            return self.model in names
+        except (requests.RequestException, ValueError, TypeError):
             return False
 
 
@@ -213,35 +182,18 @@ def create_provider(
     session: Optional[requests.Session] = None,
 ) -> LLMProvider:
     """Build a provider from MoneyPulse configuration."""
-    normalized = (
-        provider_id or "transformers"
-    ).strip().lower()
+    normalized = (provider_id or "transformers").strip().lower()
+    if not model and normalized != "transformers":
+        raise ValueError(f"A model name is required for provider: {normalized}")
 
-    if normalized in {
-        "transformers",
-        "huggingface",
-        "local_transformers",
-    }:
-        return TransformersProvider(model=model)
-
+    if normalized in {"transformers", "huggingface", "local_transformers"}:
+        return TransformersProvider(model=model or "microsoft/phi-2")
     if normalized == "ollama":
-        return OllamaProvider(
-            model=model,
-            host=host or DEFAULT_HOSTS["ollama"],
-            session=session,
-        )
-
-    if normalized in {
-        "lm_studio",
-        "lm_studio_ci",
-        "llama_cpp",
-    }:
+        return OllamaProvider(model=model, host=host or DEFAULT_HOSTS["ollama"], session=session)
+    if normalized in {"lm_studio", "lm_studio_ci", "llama_cpp"}:
         return OpenAICompatibleProvider(
             model=model,
             host=host or DEFAULT_HOSTS[normalized],
             session=session,
         )
-
-    raise ValueError(
-        f"Unsupported LLM provider: {provider_id}"
-    )
+    raise ValueError(f"Unsupported LLM provider: {provider_id}")

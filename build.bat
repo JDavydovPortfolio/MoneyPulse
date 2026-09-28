@@ -1,21 +1,19 @@
 @echo off
-echo Installing Merchant Pipeline dependencies...
+setlocal
 
-REM Create and activate virtual environment
+echo Creating MoneyPulse virtual environment...
 python -m venv .venv
+if errorlevel 1 exit /b 1
 call .venv\Scripts\activate
 
-REM Upgrade pip
 python -m pip install --upgrade pip
-
-REM Install required dependencies
-pip install -r requirements.txt
-
-REM Optional: Install GPU dependencies if available
-REM pip install torch torchvision cuda-python
+if errorlevel 1 exit /b 1
+python -m pip install -r requirements.txt
+if errorlevel 1 exit /b 1
 
 echo.
-echo Installation complete! You can now run:
-echo python main.py
+echo Desktop dependencies installed. Run:
+echo   python main.py
 echo.
-pause
+echo Optional in-process Transformers support:
+echo   python -m pip install -r requirements-transformers.txt

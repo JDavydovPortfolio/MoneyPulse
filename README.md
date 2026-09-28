@@ -1,174 +1,196 @@
 # MoneyPulse
 
-MoneyPulse is an experimental, local-first financial document processing pipeline for Merchant Cash Advance (MCA) and related operational workflows. It combines OCR, local model-based extraction, deterministic validation, structured exports, and optional CRM integration.
+MoneyPulse is an experimental, local-first financial-document processing pipeline for Merchant Cash Advance (MCA) and related operational workflows. It combines OCR, configurable local model extraction, deterministic schema/domain validation, reviewable local output, and optional CRM adapters.
 
-> **Status:** active modernization. MoneyPulse is a portfolio/open-source project and is not a production underwriting, compliance, or decisioning system. Extracted data should be reviewed before it is used in a financial workflow.
+> **Status:** active modernization. MoneyPulse is not an underwriting, compliance-certification, or autonomous financial-decision system. Extracted values remain untrusted until deterministic validation and human review are complete.
 
-## What it does
+## Why it exists
 
-The current pipeline is designed around:
+Financial documents often contain sensitive data, while extraction models can return incomplete or malformed output. MoneyPulse is designed around two practical goals:
 
-1. **Document intake** — PDF, PNG, JPG, and JPEG files.
-2. **OCR** — Tesseract-based text extraction with image preprocessing.
-3. **Local model parsing** — a provider abstraction supports in-process Hugging Face Transformers, Ollama, LM Studio, and llama.cpp-compatible local endpoints.
-4. **Validation** — deterministic checks for fields such as EIN/SSN, ZIP code, phone number, email, state, and requested amount.
-5. **Human-review flags** — validation issues are surfaced instead of silently accepted.
-6. **Structured output** — JSON and CSV artifacts for downstream workflows.
-7. **CRM integration** — a mock/local submission flow is included for development, plus configurable REST/SOAP integration code for external systems.
+- let OCR and model inference run locally when a local backend is chosen; and
+- keep model output behind deterministic validation and explicit review boundaries before downstream use.
 
-## Architecture
+## Processing flow
 
-```mermaid
-flowchart LR
-    A[PDF / Image] --> B[Tesseract OCR]
-    B --> C[Local model provider]
-    C --> D[Structured extraction]
-    D --> E[Deterministic validation]
-    E --> F{Review required?}
-    F -->|Yes| G[Human review]
-    F -->|No| H[Structured output]
-    G --> H
-    H --> I[JSON / CSV]
-    H --> J[Optional CRM adapter]
+```text
+document
+  -> OCR/source text
+  -> local model provider
+  -> versioned structured extraction
+  -> deterministic structural validation
+  -> deterministic domain validation
+  -> human-review state
+  -> local JSON/CSV output
+  -> optional external CRM only after explicit approval
 ```
 
-## Local model providers
+The default pipeline prepares local artifacts. It does not automatically transmit processed documents to an external CRM.
 
-MoneyPulse now uses one inference interface across its local backends:
+## Supported model providers
 
 | Provider | Mode | Default endpoint |
 | --- | --- | --- |
-| Transformers | In-process | n/a |
 | Ollama | Local HTTP | `http://localhost:11434` |
 | LM Studio | OpenAI-compatible local HTTP | `http://localhost:1234` |
 | llama.cpp | OpenAI-compatible local HTTP | `http://localhost:8080` |
+| Hugging Face Transformers | In-process | Optional dependency set |
 
-The pipeline configuration accepts:
-
-```python
-config = {
-    "llm_provider": "ollama",
-    "llm_host": "http://localhost:11434",
-    "model": "your-local-model",
-}
-```
-
-The legacy `ollama_host` configuration key remains accepted for compatibility.
-
-## Privacy model
-
-MoneyPulse is designed to support local processing. OCR, in-process Transformers models, and supported localhost model servers can operate on the same machine as the documents.
-
-A few important details:
-
-- Python packages and model weights may require network access during initial installation/download unless they are already cached or supplied offline.
-- A local HTTP model server is still a network service, even when bound only to localhost.
-- Optional CRM connectors make external network requests when configured.
-- No claim is made that a particular deployment is compliant with a specific regulation or security standard. Deployment security depends on how the software, model runtime, operating system, storage, and integrations are configured.
-
-## Repository documentation
-
-- [Architecture](docs/ARCHITECTURE.md)
-- [Synthetic examples](examples/README.md)
-- [Contributing](CONTRIBUTING.md)
-- [Security policy](SECURITY.md)
+The desktop application defaults to Ollama with model name `qwen3:4b`. MoneyPulse does not pull that model automatically. If the configured provider or model is unavailable, component checks and processing fail with an explicit error rather than silently substituting data.
 
 ## Requirements
 
-- Python 3.9+
-- Tesseract OCR
-- Poppler for PDF-to-image conversion used by `pdf2image`
-- Sufficient memory for the selected local model
-- Optional CUDA-capable GPU for faster in-process inference
+MoneyPulse needs the following system tools for document OCR:
+
+- Tesseract OCR;
+- Poppler for PDF rendering through `pdf2image`.
+
+Python dependency sets are separated by purpose:
+
+- `requirements-minimal.txt` — OCR modules only;
+- `requirements-core.txt` — headless pipeline plus local HTTP model providers;
+- `requirements.txt` — desktop GUI;
+- `requirements-transformers.txt` — optional in-process Transformers provider;
+- `requirements-crm.txt` — optional SOAP/OAuth CRM dependencies;
+- `requirements-dev.txt` — tests and security linting;
+- `requirements-build.txt` — PyInstaller tooling.
+
+### Verification environment
+
+On 2026-09-28, all 34 deterministic tests and the synthetic OCR workflow were executed successfully on Python 3.13.5 with Tesseract 5.5.0 and Poppler 25.06.0. Other Python/platform combinations should be treated as **not yet verified by this modernization pass**, even when dependencies support them. A clean dependency installation could not be completed in the verification sandbox because outbound package-index DNS/network access was unavailable; the install commands below are therefore documented but not claimed as freshly verified there.
 
 ## Installation
 
 ```bash
 git clone https://github.com/JDavydovPortfolio/MoneyPulse.git
 cd MoneyPulse
-
 python -m venv .venv
 ```
 
-Activate the environment:
-
-**Windows PowerShell**
-
-```powershell
-.\.venv\Scripts\Activate.ps1
-```
-
-**macOS / Linux**
-
-```bash
-source .venv/bin/activate
-```
-
-Install the full application dependencies:
+Activate the environment, then install the dependency set you need. For the desktop application:
 
 ```bash
 python -m pip install --upgrade pip
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 ```
 
-`requirements-minimal.txt` is only for lightweight OCR/module-level experimentation. It does **not** contain the GUI or local-model stack required to launch `python main.py`.
+For a headless/local-server setup:
 
-## Run
+```bash
+python -m pip install -r requirements-core.txt
+```
+
+For in-process Transformers:
+
+```bash
+python -m pip install -r requirements-transformers.txt
+```
+
+A network connection may be needed to install packages or model weights. Local-first does not mean every installation or configuration is offline.
+
+## Reproducible synthetic demo
+
+The repository includes a deterministic demo that creates a fictional merchant image, performs real local OCR, injects a deterministic fixture provider instead of a live model, validates the structured result, and writes local output:
+
+```bash
+python examples/run_synthetic_demo.py
+```
+
+This demo is for pipeline reproducibility. It is **not** a model-accuracy benchmark.
+
+The expected high-level result is:
+
+```text
+processing_status: completed
+validation_status: passed
+review_state: ready_for_review
+output destination: local_only
+```
+
+## Desktop application
 
 ```bash
 python main.py
 ```
 
-The desktop application creates/uses:
+The application creates or uses:
 
-- `input/` for source documents
-- `output/` for generated JSON/CSV data
-- `logs/` for local runtime logs
+- `input/` for documents selected for processing;
+- `output/` for local JSON/CSV artifacts;
+- `logs/` for local runtime logs.
 
-Do not commit real merchant, applicant, banking, tax-ID, or other sensitive documents to the repository.
+The configuration dialog lets you choose provider, host, and model. Automatic provider/model discovery exists as a separate component and is not yet integrated directly into the main configuration dialog.
 
-## Development
+## Trust boundary and schema
 
-The deterministic test suite does not download large ML models or call a real model server.
+Model output is treated as untrusted. `src/schema.py` enforces a versioned extraction shape before domain validation can proceed. Unexpected root fields, missing schema fields, wrong nested types, malformed provenance, and unsupported schema versions fail closed.
+
+The extraction result keeps provenance for review, including:
+
+- source file;
+- provider and model;
+- number of document chunks evaluated;
+- raw response attempts by field/chunk.
+
+Raw model-response provenance is not copied into the default downstream CRM-shaped JSON artifact.
+
+The current required domain fields are `merchant_name` and `document_type`. Optional financial/contact fields are validated when present; missing optional fields are not invented.
+
+## Long documents
+
+Parser input is split into word-bounded chunks. Each field can be attempted across later chunks instead of only the first document chunk. This improves completeness for long documents while retaining per-attempt provenance.
+
+## Human review and CRM safety
+
+Validation produces explicit states such as `ready_for_review`, `needs_review`, and `needs_correction`. Validation never turns extraction into a funding/underwriting decision.
+
+The optional enterprise CRM submitter requires all of the following before external transmission:
+
+1. deterministic validation status is `passed`;
+2. `review_approved` is explicitly `true`;
+3. `review_state` is explicitly `approved`.
+
+SOAP/OAuth dependencies are lazy-loaded only when those optional integrations are configured. The default local pipeline does not require `zeep` or `requests-oauthlib`.
+
+## Privacy model
+
+MoneyPulse can keep OCR and model inference on the same machine when a local backend is used. Network activity can still occur when:
+
+- Python packages or model weights are downloaded;
+- a configured model endpoint is not local;
+- an optional external CRM integration is explicitly enabled and approved.
+
+Do not commit real merchant/applicant documents, credentials, tax identifiers, bank information, generated outputs, logs, or local configuration. See [SECURITY.md](SECURITY.md).
+
+## Development and verification
+
+Install development dependencies and run:
 
 ```bash
-pip install pytest
-python -m compileall -q main.py src
+python -m compileall -q main.py src tests examples
 python -m pytest -q
 ```
 
-The repository also includes a Bandit security-scanning workflow configuration in `.github/workflows/bandit.yml`.
+The deterministic test suite uses fakes for model-server behavior; it does not require downloading a large model or starting a live inference server. OCR integration tests use generated fictional images and require Tesseract.
+
+The repository also contains a Bandit workflow. Passing Bandit is security-lint evidence only; it is not a security or compliance certification.
 
 ## Current limitations
 
-MoneyPulse is under active modernization. In the current codebase:
+- Extraction quality varies by OCR quality, document layout, prompts, and chosen model.
+- No fixed extraction-accuracy or speed benchmark is published.
+- A live local-model smoke test is environment-dependent and separate from deterministic tests.
+- Automatic provider/model discovery is not yet wired into the main provider dialog.
+- External CRM adapters require deployment-specific testing and credentials.
+- PyInstaller configurations are retained, but binary builds should not be treated as verified until built and tested on their target platform.
 
-- model output is not a substitute for human verification;
-- accuracy varies by document quality, OCR quality, document layout, and model choice;
-- the default CRM submission flow is a mock implementation intended for development/testing;
-- external CRM integrations require deployment-specific configuration and testing;
-- the desktop configuration screen supports provider/host/model selection, while automatic model discovery remains a separate component;
-- there is no published benchmark supporting a fixed extraction-accuracy or speed claim.
+## Documentation
 
-## Roadmap
-
-Near-term work includes:
-
-- integrate detected model lists directly into the main desktop configuration dialog;
-- add synthetic/sample financial documents for reproducible demos;
-- add schema validation for model output;
-- expand OCR-independent extraction tests;
-- improve error handling and observability;
-- document secure deployment patterns;
-- add reproducible benchmarks before publishing performance claims.
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md). Bug reports and focused pull requests are welcome.
-
-## Security
-
-Please see [SECURITY.md](SECURITY.md). Do not open a public issue containing real financial data, credentials, tax identifiers, bank-account information, or other sensitive information.
+- [Architecture](docs/ARCHITECTURE.md)
+- [Synthetic examples](examples/README.md)
+- [Contributing](CONTRIBUTING.md)
+- [Security policy](SECURITY.md)
+- [Changelog](CHANGELOG.md)
 
 ## License
 

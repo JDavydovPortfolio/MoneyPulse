@@ -1,46 +1,32 @@
 # -*- mode: python ; coding: utf-8 -*-
-# MoneyPulse Build Configuration
-# Enterprise Financial Document Processing Solution
+"""Legacy full MoneyPulse PyInstaller spec.
 
-import sys
-from pathlib import Path
+Use this only from an environment where optional Transformers dependencies are
+installed. The current modernization pass does not claim that this binary build
+has been verified on Windows or another target platform.
+"""
 
 block_cipher = None
-
-# Define the main script
-main_script = 'main.py'
-
-# Data files to include
-added_files = [
-    ('input', 'input'),
-    ('README.md', '.'),
-    ('LICENSE', '.'),
-]
-
-# Hidden imports for enterprise application
+main_script = "main.py"
+added_files = [("input", "input"), ("README.md", "."), ("LICENSE", ".")]
 hidden_imports = [
-    'PySide6.QtCore',
-    'PySide6.QtGui',
-    'PySide6.QtWidgets',
-    'pytesseract',
-    'cv2',
-    'PIL',
-    'PIL.Image',
-    'pdf2image',
-    'requests',
-    'numpy',
-    'qtawesome',
-    'qdarkstyle',
-    'pyqtgraph',
-    'pathlib',
-    'datetime',
-    'json',
-    'csv',
-    'logging',
-    'typing',
+    "PySide6.QtCore",
+    "PySide6.QtGui",
+    "PySide6.QtWidgets",
+    "pytesseract",
+    "cv2",
+    "numpy",
+    "PIL",
+    "PIL.Image",
+    "pdf2image",
+    "requests",
+    "yaml",
+    "qtawesome",
+    "qdarkstyle",
+    "torch",
+    "transformers",
 ]
 
-# Analysis phase
 a = Analysis(
     [main_script],
     pathex=[],
@@ -50,27 +36,13 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[
-        'tkinter',
-        'matplotlib',
-        'IPython',
-        'jupyter',
-        'pytest',
-        'unittest',
-        'doctest',
-        'pdb',
-        'pydoc',
-    ],
+    excludes=["tkinter", "matplotlib", "IPython", "jupyter", "pytest"],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,
     noarchive=False,
 )
-
-# Remove duplicate entries
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
-
-# Create enterprise executable
 exe = EXE(
     pyz,
     a.scripts,
@@ -78,19 +50,19 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='MoneyPulse',
+    name="MoneyPulse",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=False,  # Windowed application for professional use
+    console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=None,  # Will add professional icon later
+    icon=None,
     version=None,
 )
