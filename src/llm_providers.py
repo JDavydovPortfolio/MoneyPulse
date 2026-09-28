@@ -172,6 +172,44 @@ class OpenAICompatibleProvider(LLMProvider):
             return False
 
 
+class LMStudioProvider(OpenAICompatibleProvider):
+    """LM Studio backend using its native API to control reasoning tokens."""
+
+    def generate(self, prompt: str, max_tokens: int = 128, temperature: float = 0.0) -> str:
+        try:
+            response = self.session.post(
+                f"{self.host}/api/v1/chat",
+                json={
+                    "model": self.model,
+                    "input": prompt,
+                    "temperature": temperature,
+                    "max_output_tokens": max_tokens,
+                    "reasoning": "off",
+                    "store": False,
+                },
+                headers={"Content-Type": "application/json"},
+                timeout=60,
+            )
+            if response.status_code in {404, 405}:
+                # Older LM Studio releases do not expose the native REST API.
+                # Keep them usable through the stable OpenAI-compatible route.
+                return super().generate(prompt, max_tokens=max_tokens, temperature=temperature)
+            response.raise_for_status()
+            data = response.json()
+        except (requests.RequestException, ValueError) as exc:
+            raise RuntimeError(f"LM Studio request failed at {self.host}: {exc}") from exc
+
+        output = data.get("output") if isinstance(data, dict) else None
+        if not isinstance(output, list):
+            raise ValueError("LM Studio response did not include output messages")
+        messages = [item.get("content") for item in output if isinstance(item, dict) and item.get("type") == "message"]
+        if not messages:
+            raise ValueError("LM Studio response did not include message content")
+        if not all(isinstance(content, str) for content in messages):
+            raise ValueError("LM Studio message content must be text")
+        return "\n".join(messages).strip()
+
+
 DEFAULT_HOSTS = {
     "ollama": "http://localhost:11434",
     "lm_studio": "http://localhost:1234",
@@ -195,7 +233,13 @@ def create_provider(
         return TransformersProvider(model=model or "microsoft/phi-2")
     if normalized == "ollama":
         return OllamaProvider(model=model, host=host or DEFAULT_HOSTS["ollama"], session=session)
-    if normalized in {"lm_studio", "lm_studio_ci", "llama_cpp"}:
+    if normalized == "lm_studio":
+        return LMStudioProvider(
+            model=model,
+            host=host or DEFAULT_HOSTS[normalized],
+            session=session,
+        )
+    if normalized in {"lm_studio_ci", "llama_cpp"}:
         return OpenAICompatibleProvider(
             model=model,
             host=host or DEFAULT_HOSTS[normalized],

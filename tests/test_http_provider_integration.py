@@ -84,6 +84,13 @@ class ProviderHandler(BaseHTTPRequestHandler):
             prompt = messages[-1].get("content", "") if messages else ""
             self._send_json({"choices": [{"message": {"content": _value_for_prompt(prompt)}}]})
             return
+        if self.path == "/api/v1/chat":
+            prompt = payload.get("input", "")
+            self._send_json({"output": [
+                {"type": "reasoning", "content": "synthetic hidden reasoning"},
+                {"type": "message", "content": _value_for_prompt(prompt)},
+            ]})
+            return
         self._send_json({"error": "not found"}, status=404)
 
 
@@ -135,6 +142,7 @@ def test_real_lm_studio_http_path_extracts_structured_fields():
     assert result["requested_amount"] == FIELD_VALUES["requested_amount"]
     assert result["llm_provider"] == "lm_studio"
     assert result["llm_model"] == "google/gemma-4-e4b"
-    chat_payloads = [payload for path, payload in ProviderHandler.request_payloads if path == "/v1/chat/completions"]
+    chat_payloads = [payload for path, payload in ProviderHandler.request_payloads if path == "/api/v1/chat"]
     assert chat_payloads
     assert all(payload["temperature"] == 0.0 for payload in chat_payloads)
+    assert all(payload["reasoning"] == "off" for payload in chat_payloads)

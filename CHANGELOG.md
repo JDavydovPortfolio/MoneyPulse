@@ -16,6 +16,7 @@ All notable MoneyPulse changes are documented here.
 
 ### Extraction and provider fixes
 
+- Use LM Studio's native REST chat endpoint with reasoning disabled, preserving its OpenAI-compatible route for older installations; verified live with Gemma 4 E2B QAT Q4_0.
 - Process fields across all document chunks instead of only the first chunk.
 - Preserve legitimate colons in extracted values while removing recognized response prefixes.
 - Added explicit file/type/corrupt-image OCR failures and clearer Tesseract/Poppler guidance.

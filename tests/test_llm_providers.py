@@ -1,4 +1,4 @@
-from src.llm_providers import OllamaProvider, OpenAICompatibleProvider, create_provider
+from src.llm_providers import LMStudioProvider, OllamaProvider, OpenAICompatibleProvider, create_provider
 
 
 class FakeResponse:
@@ -49,10 +49,43 @@ def test_openai_compatible_provider_generation():
     assert session.last_post["url"].endswith("/v1/chat/completions")
 
 
+def test_lm_studio_provider_disables_reasoning_and_reads_native_message_output():
+    session = FakeSession(post_payload={"output": [
+        {"type": "reasoning", "content": "hidden reasoning"},
+        {"type": "message", "content": "Example Merchant LLC"},
+    ]})
+    provider = LMStudioProvider("local-model", "http://localhost:1234", session=session)
+
+    assert provider.generate("Extract merchant", max_tokens=32) == "Example Merchant LLC"
+    assert session.last_post["url"].endswith("/api/v1/chat")
+    assert session.last_post["json"]["reasoning"] == "off"
+    assert session.last_post["json"]["max_output_tokens"] == 32
+    assert session.last_post["json"]["store"] is False
+
+
+def test_lm_studio_provider_falls_back_when_native_api_is_unavailable():
+    class LegacyLMStudioSession(FakeSession):
+        def __init__(self):
+            super().__init__()
+            self.posts = []
+
+        def post(self, url, **kwargs):
+            self.posts.append({"url": url, **kwargs})
+            if url.endswith("/api/v1/chat"):
+                return FakeResponse(status_code=404)
+            return FakeResponse({"choices": [{"message": {"content": "Legacy response"}}]})
+
+    session = LegacyLMStudioSession()
+    provider = LMStudioProvider("local-model", "http://localhost:1234", session=session)
+
+    assert provider.generate("Extract merchant") == "Legacy response"
+    assert [post["url"].rsplit("/", 1)[-1] for post in session.posts] == ["chat", "completions"]
+
+
 def test_factory_builds_http_providers_without_network_calls():
     session = FakeSession()
     assert isinstance(create_provider("ollama", "gemma4:e4b", session=session), OllamaProvider)
-    assert isinstance(create_provider("lm_studio", "local-model", session=session), OpenAICompatibleProvider)
+    assert isinstance(create_provider("lm_studio", "local-model", session=session), LMStudioProvider)
     assert isinstance(create_provider("llama_cpp", "local-model", session=session), OpenAICompatibleProvider)
 
 
@@ -80,6 +113,14 @@ def test_ollama_provider_rejects_malformed_response():
 def test_openai_compatible_provider_rejects_malformed_response():
     session = FakeSession(post_payload={"choices": []})
     provider = OpenAICompatibleProvider("local-model", "http://localhost:1234", session=session)
+    with pytest.raises(ValueError, match="message content"):
+        provider.generate("Extract merchant name")
+
+
+def test_lm_studio_provider_rejects_malformed_native_response():
+    provider = LMStudioProvider("local-model", "http://localhost:1234", session=FakeSession(
+        post_payload={"output": [{"type": "reasoning", "content": "thinking"}]}
+    ))
     with pytest.raises(ValueError, match="message content"):
         provider.generate("Extract merchant name")
 

@@ -32,7 +32,7 @@ The default pipeline prepares local artifacts. It does not automatically transmi
 | Provider | Mode | Default endpoint |
 | --- | --- | --- |
 | Ollama | Local HTTP | `http://localhost:11434` |
-| LM Studio | OpenAI-compatible local HTTP | `http://localhost:1234` |
+| LM Studio | Native local REST API (OpenAI-compatible fallback for older versions) | `http://localhost:1234` |
 | llama.cpp | OpenAI-compatible local HTTP | `http://localhost:8080` |
 | Hugging Face Transformers | In-process | Optional dependency set |
 
@@ -67,7 +67,7 @@ Python dependency sets are separated by purpose:
 
 ### Verification environment
 
-On 2026-09-28, the repository's `--fresh` verifier created temporary Python **3.12.14** and **3.13.15** environments, installed the complete development/desktop dependency set, passed `pip check`, compiled the code, passed all **50 tests** (including offscreen GUI tests), ran the real-Tesseract synthetic workflow, and passed Bandit on both versions. Tesseract 5.3.4 and Poppler 26.05.0 were installed on the host. A live Ollama smoke test with **Gemma 4 E2B QAT** (`gemma4:e2b-it-qat`) also passed in 30.41 seconds: merchant, amount, and email extraction matched the fictional source, deterministic validation passed, review remained unapproved, and output stayed local. This verifies one real Gemma 4 model on Ollama; the recommended **E4B default** and live LM Studio inference remain unverified. To repeat the tested configuration, run `python examples/run_live_smoke.py --provider ollama --model gemma4:e2b-it-qat` with Ollama running and that model installed.
+On 2026-09-28, the repository's `--fresh` verifier created temporary Python **3.12.14** and **3.13.15** environments, installed the complete development/desktop dependency set, passed `pip check`, compiled the code, passed all **50 tests** (including offscreen GUI tests), ran the real-Tesseract synthetic workflow, and passed Bandit on both versions. After the LM Studio provider changes, a fresh Python **3.12.14** run passed `pip check`, compileall, all **53 tests**, the real-Tesseract synthetic workflow, and Bandit. Tesseract 5.3.4 and Poppler 26.05.0 were installed on the host. A live Ollama smoke test with **Gemma 4 E2B QAT** (`gemma4:e2b-it-qat`) passed in 30.41 seconds. **Gemma 4 E2B QAT Q4_0** (`gemma-4-e2b-it-qat@q4_0`) passed the full real-Tesseract OCR-to-validation smoke test through LM Studio in 57.71 seconds. Both live runs matched merchant, requested amount, and email; deterministic validation passed, review remained unapproved, and output stayed local. The currently recommended **E4B default** remains unverified. To repeat the LM Studio test, load that model, start the LM Studio local API server, then run `python examples/run_live_smoke.py --provider lm_studio --model 'gemma-4-e2b-it-qat@q4_0'`.
 
 ## Installation
 
