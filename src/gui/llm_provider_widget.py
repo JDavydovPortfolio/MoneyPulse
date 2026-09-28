@@ -284,7 +284,7 @@ class LLMProviderWidget(QWidget):
         <ol>
         <li>Choose your preferred provider from the list above</li>
         <li>Follow the installation instructions for your chosen provider</li>
-        <li>Download and load a model (recommended: gemma3n:e2b)</li>
+        <li>Download and load a model (recommended: gemma4:e4b)</li>
         <li>Start the provider's server</li>
         <li>Click "Refresh Detection" in this dialog</li>
         <li>Select your provider and model from the dropdowns</li>

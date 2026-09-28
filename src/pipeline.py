@@ -26,7 +26,7 @@ class DocumentPipeline:
     def _build_llm(self) -> LLMParser:
         provider = self.config.get("llm_provider", "ollama")
         host = self.config.get("llm_host") or self.config.get("ollama_host")
-        model = self.config.get("model", "gemma3n:e2b")
+        model = self.config.get("model", "gemma4:e4b")
         return LLMParser(provider=provider, host=host, model=model)
 
     def process_directory(self, input_dir: str, progress_callback=None) -> List[Dict]:

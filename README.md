@@ -38,15 +38,15 @@ The default pipeline prepares local artifacts. It does not automatically transmi
 
 ### Recommended local AI setup
 
-For the easiest setup, MoneyPulse recommends **Gemma 3n E2B** while keeping the extraction layer provider-independent. The application supports both primary local-server workflows:
+For the easiest setup, MoneyPulse recommends **Gemma 4 E4B** while keeping the extraction layer provider-independent. **Gemma 4 E2B** is the lower-memory fallback when E4B is too heavy for the host. The application supports both primary local-server workflows:
 
-- **Ollama:** run `ollama pull gemma3n:e2b`, start Ollama, and keep the default endpoint `http://localhost:11434`.
-- **LM Studio:** download a Gemma 3n E2B-compatible model, start LM Studio's local API server, and use `http://localhost:1234`. MoneyPulse can auto-detect the model identifier exposed by LM Studio.
+- **Ollama:** run `ollama pull gemma4:e4b`, start Ollama, and keep the default endpoint `http://localhost:11434`.
+- **LM Studio:** download a Gemma 4 E4B-compatible model, start LM Studio's local API server, and use `http://localhost:1234`. MoneyPulse can auto-detect the model identifier exposed by LM Studio.
 
 The desktop configuration dialog includes **Auto-detect Ollama / LM Studio**. Advanced users can select another compatible local model without changing Python source code.
 
 
-The desktop application defaults to Ollama with `gemma3n:e2b`, a lightweight Gemma 3n instruction model intended for local devices. MoneyPulse does not pull model weights automatically. If the configured provider or model is unavailable, component checks and processing fail explicitly rather than silently substituting data.
+The desktop application defaults to Ollama with `gemma4:e4b`, a lightweight Gemma 3n instruction model intended for local devices. MoneyPulse does not pull model weights automatically. If the configured provider or model is unavailable, component checks and processing fail explicitly rather than silently substituting data.
 
 ## Requirements
 
@@ -67,7 +67,7 @@ Python dependency sets are separated by purpose:
 
 ### Verification environment
 
-On 2026-09-28, all 34 deterministic tests and the synthetic OCR workflow were executed successfully on Python 3.13.5 with Tesseract 5.5.0 and Poppler 25.06.0. Other Python/platform combinations should be treated as **not yet verified by this modernization pass**, even when dependencies support them. A clean dependency installation could not be completed in the verification sandbox because outbound package-index DNS/network access was unavailable; the install commands below are therefore documented but not claimed as freshly verified there.
+On 2026-09-28, all 39 deterministic tests and the synthetic OCR workflow were executed successfully on Python 3.13.5 with Tesseract 5.5.0 and Poppler 25.06.0. Other Python/platform combinations should be treated as **not yet verified by this modernization pass**, even when dependencies support them. A clean dependency installation could not be completed in the verification sandbox because outbound package-index DNS/network access was unavailable; the install commands below are therefore documented but not claimed as freshly verified there.
 
 ## Installation
 
