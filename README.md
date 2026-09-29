@@ -66,7 +66,7 @@ Python dependency sets are separated by purpose:
 
 ### Verification environment
 
-On 2026-09-28, fresh Python **3.12.14** and **3.13.15** verifier runs installed the complete development/desktop dependency set, passed `pip check`, compiled the code, passed all **53 tests**, ran the real-Tesseract synthetic workflow, and passed Bandit. Tesseract 5.3.4 and Poppler 26.05.0 were installed on the host. A live Ollama smoke test with **Gemma 4 E2B QAT** (`gemma4:e2b-it-qat`) passed in 30.41 seconds. **Gemma 4 E2B QAT Q4_0** (`gemma-4-e2b-it-qat@q4_0`) passed the full real-Tesseract OCR-to-validation smoke test through LM Studio in 57.71 seconds. Both live runs matched merchant, requested amount, and email; deterministic validation passed, review remained unapproved, and output stayed local.
+On 2026-09-28, fresh Python **3.12.14** and **3.13.15** verifier runs installed the complete development/desktop dependency set, passed `pip check`, compiled the code, passed all **54 tests**, ran the real-Tesseract synthetic workflow, and passed Bandit. Tesseract 5.3.4 and Poppler 26.05.0 were installed on the host. A live Ollama smoke test with **Gemma 4 E2B QAT** (`gemma4:e2b-it-qat`) passed in 30.41 seconds. **Gemma 4 E2B QAT Q4_0** (`gemma-4-e2b-it-qat@q4_0`) passed the full real-Tesseract OCR-to-validation smoke test through LM Studio in 57.71 seconds. Both live runs matched merchant, requested amount, and email; deterministic validation passed, review remained unapproved, and output stayed local.
 
 ## Installation
 
