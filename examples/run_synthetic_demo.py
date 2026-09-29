@@ -75,7 +75,7 @@ def _load_font(size: int):
     ):
         if Path(candidate).exists():
             return ImageFont.truetype(candidate, size)
-    return ImageFont.load_default()
+    return ImageFont.load_default(size=size)
 
 
 def make_synthetic_document(path: Path) -> None:
@@ -113,6 +113,13 @@ def main() -> int:
     )
 
     result = pipeline.process_single_document(str(input_path))
+    passed = (
+        result.get("processing_status") == "completed"
+        and result.get("validation_status") == "passed"
+        and "example harbor coffee" in result.get("extracted_text", "").lower()
+        and result.get("review_approved") is False
+        and result.get("output_result", {}).get("destination") == "local_only"
+    )
     summary = {
         "processing_status": result.get("processing_status"),
         "validation_status": result.get("validation_status"),
@@ -122,7 +129,7 @@ def main() -> int:
         "output_result": result.get("output_result"),
     }
     print(json.dumps(summary, indent=2))
-    return 0 if result.get("processing_status") == "completed" else 1
+    return 0 if passed else 1
 
 
 if __name__ == "__main__":

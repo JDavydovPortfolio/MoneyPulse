@@ -28,7 +28,7 @@ flowchart TD
 
 ### `src/ocr.py`
 
-Validates input paths and extensions, renders PDFs with Poppler through `pdf2image`, preprocesses images with OpenCV, and extracts text with Tesseract. Missing files, unsupported types, corrupt images, and missing OCR tooling fail explicitly.
+Validates input paths and extensions, renders PDFs one page at a time with Poppler through `pdf2image`, preprocesses images with OpenCV, and extracts text with Tesseract. Render/OCR calls have timeouts. Missing files, unsupported types, corrupt images, and missing OCR tooling fail explicitly.
 
 ### `src/llm_providers.py`
 
@@ -54,9 +54,17 @@ Coordinates OCR, parsing, validation, and local output. A validation failure rem
 
 The core `CRMSubmitter` creates local artifacts only. It does not simulate external acceptance or generate fake CRM IDs. `EnterpriseCRMSubmitter` is an optional adapter and blocks network transmission until deterministic validation has passed and explicit human approval is present.
 
+CSV string cells are escaped at serialization to reduce spreadsheet formula injection. JSON retains original values. The public connector rechecks literal boolean approval and state, and the submitter blocks transmission after local output failure. Approval flags do not authenticate a user; integrations must supply trusted validation and approval metadata.
+
 ### `src/gui/`
 
 Contains the PySide6 desktop interface and a separate provider-discovery widget. The main configuration dialog supports the provider IDs consumed by the pipeline. Provider discovery remains separate to avoid coupling startup to scanning local services.
+
+The main desktop saves validated settings atomically, selects individual batch results, shows optional business/funding fields, and renders source/log strings as plain text. Input/configuration changes and overlapping workers are blocked while processing is active.
+
+### `src/config.py` and `src/cli.py`
+
+Configuration is a bounded set of provider/model/OCR settings stored in ignored local YAML. The headless CLI reuses `DocumentPipeline`, performs preflight checks, handles explicit input/configuration failures, and emits local result summaries with meaningful exit codes. No GUI dependency is imported by the CLI.
 
 ## Trust boundary
 

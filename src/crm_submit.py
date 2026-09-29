@@ -12,6 +12,27 @@ import requests
 from requests.auth import HTTPBasicAuth
 
 
+def spreadsheet_safe(value):
+    """Keep untrusted CSV strings from being evaluated as spreadsheet formulas."""
+    if isinstance(value, str) and (
+        value.startswith(("\t", "\r", "\n"))
+        or value.lstrip().startswith(("=", "+", "-", "@"))
+    ):
+        return "'" + value
+    return value
+
+
+def approval_problem(metadata) -> Optional[str]:
+    """Enforce the same explicit approval gate at both public CRM entry points."""
+    if not isinstance(metadata, dict) or metadata.get("validation_status") != "passed":
+        return "External CRM submission requires successful deterministic validation"
+    if metadata.get("review_approved") is not True:
+        return "External CRM submission requires explicit human review approval"
+    if metadata.get("review_state") != "approved":
+        return "External CRM submission requires review_state='approved'"
+    return None
+
+
 class CRMSubmitter:
     """Prepare local artifacts for human review and optional downstream use."""
 
@@ -98,8 +119,7 @@ class CRMSubmitter:
                     if isinstance(doc.get("contact_info", {}), dict)
                     else {}
                 )
-                writer.writerow(
-                    {
+                row = {
                         "source_file": doc.get("source_file", ""),
                         "schema_version": doc.get("schema_version", ""),
                         "document_type": doc.get("document_type", ""),
@@ -123,7 +143,7 @@ class CRMSubmitter:
                             "processing_timestamp", ""
                         ),
                     }
-                )
+                writer.writerow({key: spreadsheet_safe(value) for key, value in row.items()})
         self.logger.info("CSV summary generated: %s", csv_filename)
         return csv_filename
 
@@ -338,6 +358,9 @@ class EnterpriseCRMConnector:
 
     def submit_financial_document(self, document_data: Dict) -> Dict:
         """Transmit an already validated and explicitly approved CRM payload."""
+        problem = approval_problem(document_data.get("processing_metadata"))
+        if problem:
+            return {"status": "blocked", "reason": problem}
         try:
             if self.crm_type == "soap":
                 return self._submit_via_soap(document_data)
@@ -594,8 +617,14 @@ class EnterpriseCRMSubmitter(CRMSubmitter):
     def submit_document(self, parsed_data: Dict) -> Dict:
         """Prepare local output and transmit only after explicit human approval."""
         local_result = super().submit_document(parsed_data)
+        problem = approval_problem(parsed_data)
 
-        if self.crm_config and not self.crm_connector:
+        if local_result.get("status") == "failed":
+            enterprise_result = {
+                "status": "blocked",
+                "reason": "External CRM submission requires successful local output preparation",
+            }
+        elif self.crm_config and not self.crm_connector:
             enterprise_result = {
                 "status": "failed",
                 "reason": "Enterprise CRM connector could not be initialized",
@@ -603,25 +632,10 @@ class EnterpriseCRMSubmitter(CRMSubmitter):
             }
         elif not self.crm_connector:
             enterprise_result = None
-        elif parsed_data.get("validation_status") != "passed":
+        elif problem:
             enterprise_result = {
                 "status": "blocked",
-                "reason": (
-                    "External CRM submission requires successful "
-                    "deterministic validation"
-                ),
-            }
-        elif not parsed_data.get("review_approved", False):
-            enterprise_result = {
-                "status": "blocked",
-                "reason": (
-                    "External CRM submission requires explicit human review approval"
-                ),
-            }
-        elif parsed_data.get("review_state") != "approved":
-            enterprise_result = {
-                "status": "blocked",
-                "reason": "External CRM submission requires review_state='approved'",
+                "reason": problem,
             }
         else:
             enterprise_result = self.crm_connector.submit_financial_document(

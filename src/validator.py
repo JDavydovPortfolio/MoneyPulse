@@ -1,5 +1,6 @@
 import logging
 import re
+from decimal import Decimal
 from datetime import datetime, timezone
 from typing import Dict, List
 
@@ -34,6 +35,14 @@ class DocumentValidator:
             validation_issues.append(
                 f"Invalid requested amount: '{amount}' (must be numeric)"
             )
+
+        business = parsed_data["business_info"]
+        for field in ("annual_revenue", "processing_volume"):
+            if business[field] and not self._validate_amount(business[field]):
+                validation_issues.append(f"Invalid {field}: '{business[field]}' (must be numeric)")
+        years = business["years_in_business"]
+        if years and re.fullmatch(r"[0-9]+(?:\.[0-9]+)?", years.strip()) is None:
+            validation_issues.append(f"Invalid years_in_business: '{years}' (must be non-negative numeric)")
 
         phone = parsed_data.get("contact_info", {}).get("phone", "")
         if phone and not self._validate_phone(phone):
@@ -84,28 +93,26 @@ class DocumentValidator:
         return parsed_data
 
     def _validate_ein_ssn(self, ein_ssn: str) -> bool:
-        clean_ein = re.sub(r"[^\d]", "", ein_ssn or "")
-        return len(clean_ein) == 9 and clean_ein.isdigit()
+        return re.fullmatch(r"(?:[0-9]{9}|[0-9]{2}-[0-9]{7}|[0-9]{3}-[0-9]{2}-[0-9]{4})", (ein_ssn or "").strip()) is not None
 
     def _validate_zip(self, zip_code: str) -> bool:
-        clean_zip = re.sub(r"[^\d]", "", zip_code or "")
-        return len(clean_zip) == 5 and clean_zip.isdigit()
+        return re.fullmatch(r"[0-9]{5}", (zip_code or "").strip()) is not None
 
     def _validate_amount(self, amount: str) -> bool:
         try:
             text = str(amount).strip()
             if not text:
                 return False
-            if text.count(".") > 1:
+            if not re.fullmatch(r"\$?\s*(?:[0-9]+|[0-9]{1,3}(?:,[0-9]{3})+)(?:\.[0-9]{1,2})?", text):
                 return False
             clean_amount = re.sub(r"[$,\s]", "", text)
-            if not re.fullmatch(r"\d+(?:\.\d{1,2})?", clean_amount):
-                return False
-            return float(clean_amount) >= 0
+            return Decimal(clean_amount).is_finite()
         except (ValueError, TypeError):
             return False
 
     def _validate_phone(self, phone: str) -> bool:
+        if re.fullmatch(r"[0-9()\s.\-]+", (phone or "").strip()) is None:
+            return False
         clean_phone = re.sub(r"[^\d]", "", phone or "")
         return len(clean_phone) == 10 and clean_phone.isdigit()
 

@@ -1,5 +1,7 @@
 import logging
 import os
+import tempfile
+import weakref
 from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
@@ -19,9 +21,19 @@ class DocumentPipeline:
         self.llm = self._build_llm()
         self.validator = DocumentValidator()
         self.crm = CRMSubmitter(output_dir)
-        self.logger = logging.getLogger(__name__)
-        if not self.logger.handlers:
-            self._setup_logging()
+        # Each pipeline owns its output log; never reuse another instance's file.
+        self.logger = logging.Logger(__name__)
+        self._setup_logging()
+        self._logging_cleanup = weakref.finalize(self, self._close_handlers, tuple(self.logger.handlers))
+
+    @staticmethod
+    def _close_handlers(handlers):
+        for handler in handlers:
+            handler.close()
+
+    def close(self):
+        """Release log handles when an embedding application finishes with this pipeline."""
+        self._logging_cleanup()
 
     def _build_llm(self, config=None) -> LLMParser:
         config = self.config if config is None else config
@@ -35,8 +47,9 @@ class DocumentPipeline:
             raise FileNotFoundError(f"Input directory not found: {input_dir}")
         files = [
             os.path.join(input_dir, filename)
-            for filename in os.listdir(input_dir)
+            for filename in sorted(os.listdir(input_dir))
             if os.path.splitext(filename)[1].lower() in SUPPORTED_EXTENSIONS
+            and os.path.isfile(os.path.join(input_dir, filename))
         ]
         if not files:
             self.logger.warning("No supported documents found in %s", input_dir)
@@ -128,10 +141,8 @@ class DocumentPipeline:
 
         try:
             os.makedirs(self.output_dir, exist_ok=True)
-            test_file = os.path.join(self.output_dir, "test_write.tmp")
-            with open(test_file, "w", encoding="utf-8") as handle:
+            with tempfile.TemporaryFile(mode="w", encoding="utf-8", dir=self.output_dir) as handle:
                 handle.write("test")
-            os.remove(test_file)
             results["output_directory"] = {
                 "status": "ok",
                 "details": f"Output directory writable: {self.output_dir}",

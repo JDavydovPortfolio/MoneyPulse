@@ -1,0 +1,7 @@
+# Copy to config.yaml (ignored by git), or use the desktop Configuration dialog.
+llm_provider: ollama
+llm_host: http://localhost:11434
+model: gemma4:e2b-it-qat
+# For LM Studio, use llm_provider: lm_studio, port 1234, and its exact model ID.
+# Optional: absolute path to Tesseract if it is not on PATH.
+tesseract_path: null

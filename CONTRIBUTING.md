@@ -6,7 +6,7 @@ Thanks for helping improve MoneyPulse.
 
 1. Fork or clone the repository.
 2. Create and activate a virtual environment.
-3. Install `requirements-dev.txt` or the narrower dependency set needed for your change.
+3. Install `requirements-dev.txt` with `-c constraints-tested.txt`, or the narrower dependency set needed for your change.
 4. Create a focused branch.
 5. Add/update deterministic tests for behavior changes.
 6. Run the complete relevant test suite before opening a pull request.
@@ -22,6 +22,10 @@ python scripts/verify.py --fresh
 ```
 
 OCR integration tests use generated fictional images and require Tesseract on the host. Model-provider tests use fakes and must not require a live server or large model download.
+
+PDF integration tests also require Poppler. HTTP integration tests start temporary localhost servers; environments that block local socket binding need that permission to run the full suite. GUI tests use Qt's offscreen platform. Follow [SETUP.md](docs/SETUP.md) for platform tools and troubleshooting.
+
+Dependency updates should deliberately update the tested constraints, pass `pip check`, the fresh verifier, and a current `pip-audit` check. Database/network failures must not be recorded as a clean vulnerability audit. Keep verification scope and interpreter versions explicit in [VERIFICATION.md](docs/VERIFICATION.md).
 
 ## Contribution guidelines
 

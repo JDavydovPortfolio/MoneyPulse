@@ -97,7 +97,8 @@ def verify_fresh(live_model: str | None) -> None:
         run([sys.executable, "-m", "venv", str(venv_dir)])
         python = venv_python(venv_dir)
 
-        run([str(python), "-m", "pip", "install", "-r", "requirements-dev.txt"])
+        run([str(python), "-m", "pip", "install", "--upgrade", "pip"])
+        run([str(python), "-m", "pip", "install", "-r", "requirements-dev.txt", "-c", "constraints-tested.txt"])
         run([str(python), "-m", "pip", "check"])
 
         command = [str(python), str(Path(__file__).resolve()), "--in-place"]

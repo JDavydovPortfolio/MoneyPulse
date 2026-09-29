@@ -22,6 +22,45 @@ def test_desktop_window_initializes_offscreen(tmp_path, monkeypatch):
     assert window.process_btn.isEnabled() is False
 
     window.close()
+
+
+def test_batch_results_are_selectable_and_ocr_remains_plain_text(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    from PySide6.QtWidgets import QMessageBox
+    monkeypatch.setattr(QMessageBox, "information", lambda *args: None)
+    app = QApplication.instance() or QApplication([])
+    window = PremiumDocumentProcessor()
+    from test_crm_submit import validated_document
+    first = validated_document()
+    first.update(source_file="first.png", processing_status="completed", extracted_text="<b>Untrusted source</b>")
+    second = {"source_file": "second.pdf", "processing_status": "failed", "error": "No text"}
+    window.processing_completed([first, second])
+    assert window.result_selector.count() == 2
+    assert "No text" in window.validation_list.item(0).text()
+    window.result_selector.setCurrentIndex(0)
+    assert window.ocr_preview.toPlainText() == "<b>Untrusted source</b>"
+    assert window.data_tree.topLevelItem(3).child(1).text(1) == "$75000"
+    window.close()
+    app.processEvents()
+
+
+def test_selection_and_reentry_are_blocked_during_processing(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    app = QApplication.instance() or QApplication([])
+    window = PremiumDocumentProcessor()
+    window.files_selected(["first.png"])
+    window.set_processing_active(True)
+    window.files_selected(["second.png"])
+    window.clear_selection()
+    window.process_documents()
+    assert window.selected_files == ["first.png"]
+    assert window.worker_thread is None
+    assert not window.config_action.isEnabled()
+    assert not window.browse_btn.isEnabled()
+    window.set_processing_active(False)
+    assert window.process_btn.isEnabled()
+    window.close()
+    app.processEvents()
     app.processEvents()
 
 

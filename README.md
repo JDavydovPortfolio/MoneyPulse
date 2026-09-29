@@ -2,7 +2,35 @@
 
 MoneyPulse is an experimental, local-first financial-document processing pipeline for Merchant Cash Advance (MCA) and related operational workflows. It combines OCR, configurable local model extraction, deterministic schema/domain validation, reviewable local output, and optional CRM adapters.
 
-> **Status:** modernization complete for the current release scope. MoneyPulse remains experimental and is not an underwriting, compliance-certification, or autonomous financial-decision system. Extracted values remain untrusted until deterministic validation and human review are complete.
+> **Status:** experimental software with verified desktop and headless workflows. Extracted values require human review. MoneyPulse does not make underwriting decisions or certify compliance. See the [verification record](docs/VERIFICATION.md) for the tested scope and remaining limits.
+
+**[Setup and troubleshooting](docs/SETUP.md)** · **[Architecture](docs/ARCHITECTURE.md)** · **[Project brief](docs/PROJECT_BRIEF.md)** · **[Contributing](CONTRIBUTING.md)**
+
+![MoneyPulse desktop processing a fictional merchant application](docs/images/moneypulse-demo.png)
+
+Actual desktop screenshot after real Tesseract OCR with the deterministic synthetic fixture provider. It demonstrates the review interface, not model accuracy.
+
+## Try it in a few minutes
+
+Use Python **3.12 or 3.13**, with Tesseract and Poppler installed ([platform instructions](docs/SETUP.md)). No model download is needed for this demo:
+
+```bash
+git clone https://github.com/JDavydovPortfolio/MoneyPulse.git
+cd MoneyPulse
+python -m venv .venv
+```
+
+Activate with `source .venv/bin/activate` on Linux/macOS or `.\\.venv\\Scripts\\Activate.ps1` in Windows PowerShell, then:
+
+```bash
+python -m pip install --upgrade pip
+python -m pip install -r requirements-core.txt -c constraints-tested.txt
+python examples/run_synthetic_demo.py
+```
+
+The demo creates a fictional document, runs real OCR, validates fixture output, and saves local JSON under `output/synthetic_demo/`. Look for `completed`, `passed`, and `ready_for_review`. It verifies the pipeline without pretending to evaluate a model.
+
+For the desktop application, install `requirements.txt` with the same constraints, start Ollama or LM Studio with your model, and run `python main.py`.
 
 ## Why it exists
 
@@ -54,7 +82,7 @@ MoneyPulse needs the following system tools for document OCR:
 - Tesseract OCR;
 - Poppler for PDF rendering through `pdf2image`.
 
-Python dependency sets are separated by purpose:
+Python 3.12+ is required by the release verifier. Python 3.12 and 3.13 have recorded verification; newer interpreter versions require their own checks. Python dependency sets are separated by purpose:
 
 - `requirements-minimal.txt` — OCR modules only;
 - `requirements-core.txt` — headless pipeline plus local HTTP model providers;
@@ -65,6 +93,8 @@ Python dependency sets are separated by purpose:
 - `requirements-build.txt` — PyInstaller tooling.
 
 ### Verification environment
+
+On **2026-09-29**, the hardened release baseline passed fresh desktop/development installs on Python **3.12.14** and **3.13.15**, including **91 tests**, `pip check`, compilation, real PDF/image OCR, offscreen GUI processing, the synthetic demo, and Bandit. A separate core-only install ran without PySide6, Torch, or Zeep. A current `pip-audit` check found no known vulnerabilities in the installed tested stack after updating pip. See [the verification record](docs/VERIFICATION.md) for audit scope, commands, and limits. The live-model results below are historical evidence; this verifier host has no live model server.
 
 On 2026-09-28, fresh Python **3.12.14** and **3.13.15** verifier runs installed the complete development/desktop dependency set, passed `pip check`, compiled the code, passed all **54 tests**, ran the real-Tesseract synthetic workflow, and passed Bandit. Tesseract 5.3.4 and Poppler 26.05.0 were installed on the host. A live Ollama smoke test with **Gemma 4 E2B QAT** (`gemma4:e2b-it-qat`) passed in 30.41 seconds. **Gemma 4 E2B QAT Q4_0** (`gemma-4-e2b-it-qat@q4_0`) passed the full real-Tesseract OCR-to-validation smoke test through LM Studio in 57.71 seconds. Both live runs matched merchant, requested amount, and email; deterministic validation passed, review remained unapproved, and output stayed local.
 
@@ -130,6 +160,17 @@ The application creates or uses:
 
 The configuration dialog lets you choose provider, host, and model. It can auto-detect Ollama and LM Studio on their default local endpoints and select a recommended installed model; custom endpoints remain configurable manually.
 
+Settings persist in git-ignored `config.yaml`. The result selector lets you inspect every document in a completed batch, including failures. Funding and business fields appear alongside merchant/contact details. Document text is displayed as plain text, and new selections/configuration changes are blocked while a worker is active.
+
+## Headless application
+
+```bash
+python -m src.cli doctor
+python -m src.cli process input --output output
+```
+
+The CLI uses the same saved configuration and pipeline. It performs component checks, writes local JSON/CSV, and returns nonzero on invalid inputs, unavailable components, processing failures, or failed domain validation. Use `python -m src.cli --help` for endpoint/model overrides and [SETUP.md](docs/SETUP.md) for exit codes and LM Studio examples.
+
 ## Trust boundary and schema
 
 Model output is treated as untrusted. `src/schema.py` enforces a versioned extraction shape before domain validation can proceed. Unexpected root fields, missing schema fields, wrong nested types, malformed provenance, and unsupported schema versions fail closed.
@@ -142,6 +183,8 @@ The extraction result keeps provenance for review, including:
 - raw response attempts by field/chunk.
 
 Raw model-response provenance is not copied into the default downstream CRM-shaped JSON artifact.
+
+CSV exports escape strings that could be evaluated as spreadsheet formulas with a leading apostrophe; the original values remain in JSON.
 
 The current required domain fields are `merchant_name` and `document_type`. Optional financial/contact fields are validated when present; missing optional fields are not invented.
 
@@ -158,6 +201,8 @@ The optional enterprise CRM submitter requires all of the following before exter
 1. deterministic validation status is `passed`;
 2. `review_approved` is explicitly `true`;
 3. `review_state` is explicitly `approved`.
+
+Approval is also checked at the public connector entry point. Local output failure blocks enterprise transmission. These flags are an integration contract, not authenticated approval records; embedding applications must own human approval. The desktop and CLI do not expose external CRM submission.
 
 SOAP/OAuth dependencies are lazy-loaded only when those optional integrations are configured. The default local pipeline does not require `zeep` or `requests-oauthlib`.
 
@@ -209,6 +254,9 @@ Use `--live-model ollama` or `--live-model lm_studio` to require a specific back
 ## Documentation
 
 - [Architecture](docs/ARCHITECTURE.md)
+- [Setup and troubleshooting](docs/SETUP.md)
+- [Verification and audit record](docs/VERIFICATION.md)
+- [Project brief and submission drafts](docs/PROJECT_BRIEF.md)
 - [Synthetic examples](examples/README.md)
 - [Contributing](CONTRIBUTING.md)
 - [Security policy](SECURITY.md)

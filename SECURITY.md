@@ -16,7 +16,11 @@ A useful private report includes the affected commit/tag, component, synthetic r
 
 ## Trust boundaries
 
-Model output is untrusted. The application enforces structural schema validation before domain validation and review state. External CRM transmission is intended to require successful deterministic validation plus explicit human approval.
+Model output is untrusted. The application enforces structural schema validation before domain validation and review state. Both public external CRM submission entry points require successful deterministic validation, literal boolean `review_approved: true`, and `review_state: approved`. The enterprise submitter also blocks transmission when local output preparation fails. These metadata checks are not a signed approval or access-control system; embedding applications must own validation and authenticated human approval, rather than accepting flags from untrusted clients.
+
+CSV exports prefix potentially executable formula strings with an apostrophe. JSON preserves source values. Keep escaping intact if another tool imports/re-exports CSV. OCR and processing-log views display document-derived text as plain text.
+
+PDFs are rendered one page at a time. Rendering and OCR have timeouts, but the application is not a malware sandbox or a complete resource-quota system. Keep Tesseract/Poppler and Python dependencies patched; process untrusted documents with appropriate OS isolation.
 
 These controls reduce accidental propagation of malformed model output; they are not a guarantee against every security or data-quality failure.
 

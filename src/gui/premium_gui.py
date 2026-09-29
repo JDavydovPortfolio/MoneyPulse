@@ -13,6 +13,7 @@ import qdarkstyle
 
 from src.pipeline import DocumentPipeline
 from src.llm_detector import LLMProviderDetector, RECOMMENDED_MODEL
+from src.config import load_config, save_config
 
 class DocumentProcessorWorker(QThread):
     """Worker thread for document processing to keep UI responsive."""
@@ -131,6 +132,7 @@ class PremiumDocumentProcessor(QMainWindow):
         self.selected_files = []
         self.processed_documents = []
         self.worker_thread = None
+        self.processing_active = False
         
         self.setup_pipeline()
         self.setup_ui()
@@ -144,10 +146,13 @@ class PremiumDocumentProcessor(QMainWindow):
         try:
             config = {
                 'llm_provider': 'ollama',
-                'llm_host': 'http://localhost:11434',
                 'model': RECOMMENDED_MODEL,
                 'tesseract_path': None
             }
+            try:
+                config.update(load_config())
+            except (ValueError, OSError) as exc:
+                QMessageBox.warning(self, "Configuration Error", f"Saved configuration could not be loaded; using defaults.\n{exc}")
             self.pipeline = DocumentPipeline(output_dir="output", config=config)
         except Exception as e:
             QMessageBox.critical(self, "Initialization Error", 
@@ -186,12 +191,12 @@ class PremiumDocumentProcessor(QMainWindow):
         self.drop_area = DropArea()
         file_layout.addWidget(self.drop_area)
         
-        browse_btn = QPushButton("Browse Files")
+        browse_btn = self.browse_btn = QPushButton("Browse Files")
         browse_btn.setIcon(qta.icon('fa5s.folder-open', color='white'))
         browse_btn.clicked.connect(self.browse_files)
         file_layout.addWidget(browse_btn)
         
-        clear_btn = QPushButton("Clear Selection")
+        clear_btn = self.clear_btn = QPushButton("Clear Selection")
         clear_btn.setIcon(qta.icon('fa5s.trash', color='white'))
         clear_btn.clicked.connect(self.clear_selection)
         file_layout.addWidget(clear_btn)
@@ -251,6 +256,13 @@ class PremiumDocumentProcessor(QMainWindow):
     
     def create_results_panel(self):
         """Create the right results panel."""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        layout.addWidget(QLabel("Document results"))
+        self.result_selector = QComboBox()
+        self.result_selector.setPlaceholderText("Process documents to inspect results")
+        self.result_selector.currentIndexChanged.connect(self.show_selected_result)
+        layout.addWidget(self.result_selector)
         self.tab_widget = QTabWidget()
         
         self.ocr_preview = QTextEdit()
@@ -261,6 +273,9 @@ class PremiumDocumentProcessor(QMainWindow):
         self.data_tree = QTreeWidget()
         self.data_tree.setHeaderLabels(["Field", "Value", "Status"])
         self.data_tree.setAlternatingRowColors(True)
+        self.data_tree.header().setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        self.data_tree.header().setSectionResizeMode(1, QHeaderView.Stretch)
+        self.data_tree.header().setSectionResizeMode(2, QHeaderView.ResizeToContents)
         self.tab_widget.addTab(self.data_tree, "Extracted Data")
         
         self.validation_list = QListWidget()
@@ -270,7 +285,22 @@ class PremiumDocumentProcessor(QMainWindow):
         self.log_text.setReadOnly(True)
         self.tab_widget.addTab(self.log_text, "Processing Log")
         
-        return self.tab_widget
+        layout.addWidget(self.tab_widget)
+        return widget
+
+    def show_selected_result(self, index):
+        if 0 <= index < len(self.processed_documents):
+            self.update_results_display(self.processed_documents[index])
+
+    def set_processing_active(self, active):
+        self.processing_active = active
+        self.process_btn.setEnabled(not active and bool(self.selected_files))
+        self.browse_btn.setEnabled(not active)
+        self.clear_btn.setEnabled(not active)
+        self.drop_area.setAcceptDrops(not active)
+        self.config_action.setEnabled(not active)
+        self.stop_btn.setEnabled(active)
+        self.export_csv_btn.setEnabled(not active and bool(self.processed_documents))
     
     def setup_connections(self):
         """Setup signal connections."""
@@ -296,7 +326,7 @@ class PremiumDocumentProcessor(QMainWindow):
         
         settings_menu = menubar.addMenu('Settings')
         
-        config_action = QAction(qta.icon('fa5s.cog'), 'Configuration', self)
+        config_action = self.config_action = QAction(qta.icon('fa5s.cog'), 'Configuration', self)
         config_action.triggered.connect(self.show_configuration)
         settings_menu.addAction(config_action)
         
@@ -320,6 +350,8 @@ class PremiumDocumentProcessor(QMainWindow):
     
     def files_selected(self, files: List[str]):
         """Handle file selection."""
+        if self.processing_active:
+            return
         self.selected_files = files
         self.process_btn.setEnabled(True)
         self.drop_area.setText(f"{len(files)} file(s) selected")
@@ -331,6 +363,8 @@ class PremiumDocumentProcessor(QMainWindow):
     
     def clear_selection(self):
         """Clear file selection."""
+        if self.processing_active:
+            return
         self.selected_files = []
         self.process_btn.setEnabled(False)
         self.export_csv_btn.setEnabled(False)
@@ -344,9 +378,13 @@ class PremiumDocumentProcessor(QMainWindow):
         self.data_tree.clear()
         self.validation_list.clear()
         self.processed_documents = []
+        self.result_selector.clear()
+        self.export_csv_btn.setEnabled(False)
     
     def process_documents(self):
         """Start document processing in background thread."""
+        if self.processing_active:
+            return
         if not self.selected_files:
             QMessageBox.warning(self, "Warning", "Please select documents first")
             return
@@ -358,12 +396,14 @@ class PremiumDocumentProcessor(QMainWindow):
         self.progress_bar.setValue(0)
         
         self.clear_results()
+        self.set_processing_active(True)
         
         self.worker_thread = DocumentProcessorWorker(self.pipeline, self.selected_files)
         self.worker_thread.progress_updated.connect(self.update_progress)
         self.worker_thread.document_processed.connect(self.document_processed)
         self.worker_thread.processing_completed.connect(self.processing_completed)
         self.worker_thread.error_occurred.connect(self.processing_error)
+        self.worker_thread.finished.connect(lambda: self.set_processing_active(False))
         self.worker_thread.start()
         
         self.log_message(f"Started processing {len(self.selected_files)} documents")
@@ -397,10 +437,18 @@ class PremiumDocumentProcessor(QMainWindow):
         """Handle completion of all document processing."""
         self.processed_documents = processed_documents
         
-        self.process_btn.setEnabled(True)
         self.stop_btn.setEnabled(False)
         self.progress_bar.setVisible(False)
-        self.export_csv_btn.setEnabled(True)
+        self.result_selector.blockSignals(True)
+        self.result_selector.clear()
+        for document in processed_documents:
+            self.result_selector.addItem(
+                f"{document.get('source_file', 'Unknown')} — {document.get('validation_status', document.get('processing_status', 'unknown'))}"
+            )
+        self.result_selector.blockSignals(False)
+        if processed_documents:
+            self.result_selector.setCurrentIndex(len(processed_documents) - 1)
+            self.show_selected_result(len(processed_documents) - 1)
         
         successful = sum(1 for doc in processed_documents if doc.get('processing_status') == 'completed')
         failed = len(processed_documents) - successful
@@ -419,7 +467,6 @@ class PremiumDocumentProcessor(QMainWindow):
     
     def processing_error(self, error_message: str):
         """Handle processing errors."""
-        self.process_btn.setEnabled(True)
         self.stop_btn.setEnabled(False)
         self.progress_bar.setVisible(False)
         
@@ -431,19 +478,23 @@ class PremiumDocumentProcessor(QMainWindow):
     def update_results_display(self, result: Dict):
         """Update the results display with processed document data."""
         extracted_text = result.get('extracted_text', '')
-        self.ocr_preview.setText(extracted_text)
+        self.ocr_preview.setPlainText(extracted_text)
         
         self.data_tree.clear()
+        if result.get('processing_status') == 'failed':
+            self.validation_list.clear()
+            self.validation_list.addItem(f"Processing failed: {result.get('error', 'Unknown error')}")
+            return
         
         merchant_item = QTreeWidgetItem(["Merchant Information", "", ""])
         self.data_tree.addTopLevelItem(merchant_item)
         
         merchant_name = result.get('merchant_name', '')
-        name_item = QTreeWidgetItem(["Name", merchant_name, "Valid" if merchant_name else "Invalid"])
+        name_item = QTreeWidgetItem(["Name", merchant_name, "Present" if merchant_name else "Missing"])
         merchant_item.addChild(name_item)
         
         ein_ssn = result.get('ein_or_ssn', '')
-        ein_item = QTreeWidgetItem(["EIN/SSN", ein_ssn, "Valid" if len(ein_ssn.replace('-', '')) == 9 else "Invalid"])
+        ein_item = QTreeWidgetItem(["EIN/SSN", ein_ssn, "Present" if ein_ssn else "Not provided"])
         merchant_item.addChild(ein_item)
         
         address_item = QTreeWidgetItem(["Address", "", ""])
@@ -452,7 +503,7 @@ class PremiumDocumentProcessor(QMainWindow):
         address = result.get('address', {})
         for field in ['street', 'city', 'state', 'zip']:
             value = address.get(field, '')
-            status = "✓" if value else "❌"
+            status = "Present" if value else "Not provided"
             addr_field_item = QTreeWidgetItem([field.title(), value, status])
             address_item.addChild(addr_field_item)
         
@@ -462,10 +513,19 @@ class PremiumDocumentProcessor(QMainWindow):
         contact = result.get('contact_info', {})
         for field in ['phone', 'email']:
             value = contact.get(field, '')
-            status = "✓" if value else "❌"
+            status = "Present" if value else "Not provided"
             contact_field_item = QTreeWidgetItem([field.title(), value, status])
             contact_item.addChild(contact_field_item)
         
+        application_item = QTreeWidgetItem(["Application", "", ""])
+        self.data_tree.addTopLevelItem(application_item)
+        for field in ('document_type', 'requested_amount'):
+            value = result.get(field, '')
+            application_item.addChild(QTreeWidgetItem([field.replace('_', ' ').title(), value, "Present" if value else "Not provided"]))
+        business_item = QTreeWidgetItem(["Business Information", "", ""])
+        self.data_tree.addTopLevelItem(business_item)
+        for field, value in result.get('business_info', {}).items():
+            business_item.addChild(QTreeWidgetItem([field.replace('_', ' ').title(), value, "Present" if value else "Not provided"]))
         self.data_tree.expandAll()
         
         self.validation_list.clear()
@@ -482,6 +542,7 @@ class PremiumDocumentProcessor(QMainWindow):
         )
         review_item.setIcon(qta.icon('fa5s.user-check'))
         self.validation_list.addItem(review_item)
+        self.validation_list.addItem("Compare extracted values with the source document before downstream use.")
         
         issues = result.get('flagged_issues', [])
         if issues:
@@ -559,6 +620,8 @@ class PremiumDocumentProcessor(QMainWindow):
     
     def show_configuration(self):
         """Show local model configuration dialog."""
+        if self.processing_active:
+            return
         dialog = QDialog(self)
         dialog.setWindowTitle("MoneyPulse Configuration")
         dialog.setModal(True)
@@ -688,6 +751,10 @@ class PremiumDocumentProcessor(QMainWindow):
             except Exception as exc:
                 QMessageBox.warning(self, "Configuration Error", str(exc))
                 return
+            try:
+                save_config(self.pipeline.config)
+            except (OSError, ValueError) as exc:
+                QMessageBox.warning(self, "Settings Not Saved", f"Settings apply for this session but could not be saved.\n{exc}")
             self.log_message(
                 "Local model configuration updated: "
                 f"{new_config['llm_provider']} / {new_config['model']}"
@@ -720,7 +787,8 @@ class PremiumDocumentProcessor(QMainWindow):
         """Add message to processing log."""
         timestamp = datetime.now().strftime("%H:%M:%S")
         formatted_message = f"[{timestamp}] {message}"
-        self.log_text.append(formatted_message)
+        self.log_text.moveCursor(QTextCursor.End)
+        self.log_text.insertPlainText(formatted_message + "\n")
         
         cursor = self.log_text.textCursor()
         cursor.movePosition(QTextCursor.End)

@@ -7,7 +7,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 import pytesseract
-from pdf2image import convert_from_path
+from pdf2image import convert_from_path, pdfinfo_from_path
 
 logger = logging.getLogger(__name__)
 SUPPORTED_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg"}
@@ -61,7 +61,19 @@ def extract_text(file_path: str) -> str:
 
 def _extract_from_pdf(pdf_path: Path) -> str:
     try:
-        images = convert_from_path(pdf_path)
+        page_count = pdfinfo_from_path(pdf_path, timeout=30)["Pages"]
+        extracted_text = []
+        # Render one page at a time so long PDFs do not hold every image in RAM.
+        for page in range(1, page_count + 1):
+            images = convert_from_path(pdf_path, first_page=page, last_page=page, timeout=120)
+            for image in images:
+                try:
+                    cv_image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+                    processed = _preprocess_image(cv_image)
+                    extracted_text.append(pytesseract.image_to_string(processed, timeout=120))
+                finally:
+                    image.close()
+        return "\n\n".join(extracted_text)
     except Exception as exc:
         message = str(exc)
         if "poppler" in message.lower() or "pdfinfo" in message.lower():
@@ -70,20 +82,12 @@ def _extract_from_pdf(pdf_path: Path) -> str:
             ) from exc
         raise
 
-    extracted_text = []
-    for image in images:
-        cv_image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
-        processed = _preprocess_image(cv_image)
-        extracted_text.append(pytesseract.image_to_string(processed))
-    return "\n\n".join(extracted_text)
-
-
 def _extract_from_image(image_path: Path) -> str:
     image = cv2.imread(str(image_path))
     if image is None:
         raise ValueError(f"Failed to load image: {image_path}")
     processed = _preprocess_image(image)
-    return pytesseract.image_to_string(processed)
+    return pytesseract.image_to_string(processed, timeout=120)
 
 
 def _preprocess_image(image: np.ndarray) -> np.ndarray:

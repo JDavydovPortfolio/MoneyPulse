@@ -114,7 +114,7 @@ def validate_extraction_schema(data: Dict[str, Any]) -> None:
         if not isinstance(provenance[field], str):
             raise SchemaValidationError(f"provenance.{field} must be a string")
 
-    if not isinstance(provenance["document_chunks"], int) or provenance["document_chunks"] < 1:
+    if type(provenance["document_chunks"]) is not int or provenance["document_chunks"] < 1:
         raise SchemaValidationError("provenance.document_chunks must be a positive integer")
 
     attempts = provenance["field_attempts"]
@@ -129,7 +129,7 @@ def validate_extraction_schema(data: Dict[str, Any]) -> None:
                 raise SchemaValidationError(
                     f"provenance.field_attempts.{field_name} entries must contain chunk_index and raw_response"
                 )
-            if not isinstance(attempt["chunk_index"], int) or attempt["chunk_index"] < 0:
-                raise SchemaValidationError("chunk_index must be a non-negative integer")
+            if type(attempt["chunk_index"]) is not int or not 0 <= attempt["chunk_index"] < provenance["document_chunks"]:
+                raise SchemaValidationError("chunk_index must be an integer within the document chunk range")
             if not isinstance(attempt["raw_response"], str):
                 raise SchemaValidationError("raw_response must be a string")

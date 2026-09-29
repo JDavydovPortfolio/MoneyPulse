@@ -4,6 +4,18 @@ All notable MoneyPulse changes are documented here.
 
 ## [Unreleased]
 
+### September 29 release hardening
+
+- Neutralize spreadsheet formula prefixes in all CSV string cells while preserving original JSON values.
+- Require literal boolean human approval at both public enterprise CRM entry points, and block external submission after local output failure.
+- Reject boolean/out-of-range provenance chunk numbers and malformed tax ID, phone, ZIP, revenue, volume, and years-in-business values.
+- Render PDFs one page at a time with render/OCR timeouts; verify multi-page PDF extraction with a real generated PDF.
+- Add document selection for batch results, display funding/business fields, keep OCR/log text plain, and prevent input/configuration changes or overlapping workers while processing.
+- Persist desktop configuration atomically, validate saved settings, and add an explicit example configuration.
+- Add a headless `doctor`/`process` CLI with preflight checks, local-only summaries, and nonzero failure exits.
+- Upgrade the verifier's pip installer and use recorded dependency constraints for repeatable fresh checks.
+- Add platform setup/troubleshooting, a real synthetic desktop screenshot, a verification record, and a maintainer-review project brief.
+
 ### Security and trust-boundary changes
 
 - Added strict extraction schema versioning and fail-closed structural validation before domain validation.

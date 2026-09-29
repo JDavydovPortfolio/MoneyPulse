@@ -63,7 +63,7 @@ def _font(size=34):
     ]:
         if Path(candidate).exists():
             return ImageFont.truetype(candidate, size)
-    return ImageFont.load_default()
+    return ImageFont.load_default(size=size)
 
 
 def _synthetic_image(path):
@@ -177,3 +177,19 @@ def test_output_failure_is_not_reported_as_completed(tmp_path, monkeypatch):
     result = pipeline.process_single_document(str(image_path))
     assert result["processing_status"] == "failed"
     assert "not writable" in result["error"]
+
+
+def test_pipeline_logs_are_isolated_and_handles_can_be_closed(tmp_path):
+    import logging
+    first = DocumentPipeline(output_dir=str(tmp_path / "first"))
+    second = DocumentPipeline(output_dir=str(tmp_path / "second"))
+    first.logger.info("first pipeline only")
+    second.logger.info("second pipeline only")
+    first_log = next((tmp_path / "first" / "logs").glob("*.log")).read_text()
+    second_log = next((tmp_path / "second" / "logs").glob("*.log")).read_text()
+    assert "first pipeline only" in first_log and "second pipeline only" not in first_log
+    assert "second pipeline only" in second_log and "first pipeline only" not in second_log
+    handlers = [handler for pipeline in (first, second) for handler in pipeline.logger.handlers if isinstance(handler, logging.FileHandler)]
+    first.close()
+    second.close()
+    assert all(handler.stream is None for handler in handlers)
