@@ -19,13 +19,19 @@ class FakeProvider(LLMProvider):
 
 
 def test_parser_uses_injected_provider_without_loading_a_model():
-    provider = FakeProvider()
+    provider = FakeProvider(
+        lambda prompt: (
+            "Example Merchant LLC"
+            if "merchant or business name" in prompt
+            else ""
+        )
+    )
     parser = LLMParser(provider="test", provider_instance=provider)
     result = parser.parse_document("Business Name: Example Merchant LLC", "application.pdf")
     assert result["source_file"] == "application.pdf"
     assert result["llm_provider"] == "test"
     assert result["llm_model"] == "fake-model"
-    assert result["merchant_name"] == "Example Value"
+    assert result["merchant_name"] == "Example Merchant LLC"
     assert result["schema_version"] == "1.0"
     assert result["review_state"] == "unreviewed"
     assert result["review_approved"] is False
@@ -40,14 +46,27 @@ def test_parser_rejects_empty_document():
 
 
 def test_clean_response_preserves_colons_inside_value():
-    provider = FakeProvider(lambda prompt: "merchant_name: Acme: East" if "merchant or business name" in prompt else "")
+    provider = FakeProvider(
+        lambda prompt: (
+            "merchant_name: Acme: East"
+            if "merchant or business name" in prompt
+            else ""
+        )
+    )
     parser = LLMParser(provider="test", provider_instance=provider)
-    result = parser.parse_document("Business Name appears here")
+    result = parser.parse_document("Business Name: Acme: East")
     assert result["merchant_name"] == "Acme: East"
 
 
 def test_parser_checks_later_chunks_when_field_is_missing_from_first_chunk():
-    words = ["filler"] * 512 + ["LATER_CHUNK_MARKER", "Business", "Name", "Example", "Harbor"]
+    words = ["filler"] * 512 + [
+        "LATER_CHUNK_MARKER",
+        "Business",
+        "Name",
+        "Example",
+        "Harbor",
+        "LLC",
+    ]
 
     def responder(prompt):
         if "merchant or business name" in prompt and "LATER_CHUNK_MARKER" in prompt:
