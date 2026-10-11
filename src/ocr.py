@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""OCR extraction for PDFs and supported image formats."""
+"""OCR extraction for PDFs and supported image formats with bounded inputs."""
 
 import logging
 from pathlib import Path
@@ -7,17 +7,36 @@ from pathlib import Path
 import cv2
 import numpy as np
 import pytesseract
+from PIL import Image
 from pdf2image import convert_from_path, pdfinfo_from_path
 
 logger = logging.getLogger(__name__)
 SUPPORTED_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg"}
+DEFAULT_MAX_FILE_SIZE_MB = 50
+DEFAULT_MAX_PDF_PAGES = 100
+DEFAULT_MAX_IMAGE_PIXELS = 40_000_000
+
+
+def _positive_int(value, name: str) -> int:
+    if type(value) is not int or value <= 0:
+        raise ValueError(f"{name} must be a positive integer")
+    return value
 
 
 class OCRProcessor:
     """Handle text extraction from documents using Tesseract OCR."""
 
-    def __init__(self, tesseract_path: str = None):
+    def __init__(
+        self,
+        tesseract_path: str = None,
+        max_file_size_mb: int = DEFAULT_MAX_FILE_SIZE_MB,
+        max_pdf_pages: int = DEFAULT_MAX_PDF_PAGES,
+        max_image_pixels: int = DEFAULT_MAX_IMAGE_PIXELS,
+    ):
         self.logger = logging.getLogger(__name__)
+        self.max_file_size_mb = _positive_int(max_file_size_mb, "max_file_size_mb")
+        self.max_pdf_pages = _positive_int(max_pdf_pages, "max_pdf_pages")
+        self.max_image_pixels = _positive_int(max_image_pixels, "max_image_pixels")
         if tesseract_path:
             pytesseract.pytesseract.tesseract_cmd = tesseract_path
 
@@ -32,10 +51,19 @@ class OCRProcessor:
                 f"Unsupported file type '{path.suffix or '<none>'}'. "
                 "Supported types: PDF, PNG, JPG, JPEG"
             )
+        max_bytes = self.max_file_size_mb * 1024 * 1024
+        if path.stat().st_size > max_bytes:
+            raise ValueError(
+                f"Input file size exceeds configured OCR limit of {self.max_file_size_mb} MB"
+            )
         try:
             if path.suffix.lower() == ".pdf":
-                return _extract_from_pdf(path)
-            return _extract_from_image(path)
+                return _extract_from_pdf(
+                    path,
+                    max_pdf_pages=self.max_pdf_pages,
+                    max_image_pixels=self.max_image_pixels,
+                )
+            return _extract_from_image(path, max_image_pixels=self.max_image_pixels)
         except pytesseract.TesseractNotFoundError as exc:
             raise RuntimeError(
                 "Tesseract OCR is not installed or is not on PATH. "
@@ -59,18 +87,43 @@ def extract_text(file_path: str) -> str:
     return OCRProcessor().extract_text(file_path)
 
 
-def _extract_from_pdf(pdf_path: Path) -> str:
+def _extract_from_pdf(
+    pdf_path: Path,
+    max_pdf_pages: int = DEFAULT_MAX_PDF_PAGES,
+    max_image_pixels: int = DEFAULT_MAX_IMAGE_PIXELS,
+) -> str:
+    max_pdf_pages = _positive_int(max_pdf_pages, "max_pdf_pages")
+    max_image_pixels = _positive_int(max_image_pixels, "max_image_pixels")
     try:
-        page_count = pdfinfo_from_path(pdf_path, timeout=30)["Pages"]
+        page_count = int(pdfinfo_from_path(pdf_path, timeout=30)["Pages"])
+        if page_count < 1:
+            raise ValueError("PDF contains no pages")
+        if page_count > max_pdf_pages:
+            raise ValueError(
+                f"PDF page count {page_count} exceeds configured OCR limit of {max_pdf_pages} pages"
+            )
         extracted_text = []
         # Render one page at a time so long PDFs do not hold every image in RAM.
         for page in range(1, page_count + 1):
-            images = convert_from_path(pdf_path, first_page=page, last_page=page, timeout=120)
+            images = convert_from_path(
+                pdf_path,
+                first_page=page,
+                last_page=page,
+                timeout=120,
+            )
             for image in images:
                 try:
+                    width, height = image.size
+                    if width * height > max_image_pixels:
+                        raise ValueError(
+                            f"Rendered PDF page {page} exceeds configured OCR pixel limit "
+                            f"of {max_image_pixels} pixels"
+                        )
                     cv_image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
                     processed = _preprocess_image(cv_image)
-                    extracted_text.append(pytesseract.image_to_string(processed, timeout=120))
+                    extracted_text.append(
+                        pytesseract.image_to_string(processed, timeout=120)
+                    )
                 finally:
                     image.close()
         return "\n\n".join(extracted_text)
@@ -82,7 +135,21 @@ def _extract_from_pdf(pdf_path: Path) -> str:
             ) from exc
         raise
 
-def _extract_from_image(image_path: Path) -> str:
+
+def _extract_from_image(
+    image_path: Path,
+    max_image_pixels: int = DEFAULT_MAX_IMAGE_PIXELS,
+) -> str:
+    max_image_pixels = _positive_int(max_image_pixels, "max_image_pixels")
+    try:
+        with Image.open(image_path) as header:
+            width, height = header.size
+    except Exception as exc:
+        raise ValueError(f"Failed to load image: {image_path}") from exc
+    if width * height > max_image_pixels:
+        raise ValueError(
+            f"Image dimensions exceed configured OCR pixel limit of {max_image_pixels} pixels"
+        )
     image = cv2.imread(str(image_path))
     if image is None:
         raise ValueError(f"Failed to load image: {image_path}")

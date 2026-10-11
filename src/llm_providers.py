@@ -1,12 +1,54 @@
 """Provider abstractions for local MoneyPulse model inference."""
 
+import ipaddress
 import logging
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
+from urllib.parse import urlsplit
 
 import requests
 
 logger = logging.getLogger(__name__)
+
+
+def is_local_model_host(host: str) -> bool:
+    """Return True only for explicit loopback/private/link-local HTTP(S) endpoints."""
+    if not isinstance(host, str) or not host.strip():
+        return False
+    try:
+        endpoint = urlsplit(host)
+    except ValueError:
+        return False
+    if endpoint.scheme not in {"http", "https"} or not endpoint.hostname:
+        return False
+    if endpoint.username or endpoint.password:
+        return False
+
+    hostname = endpoint.hostname.rstrip(".").lower()
+    if hostname == "localhost" or hostname.endswith(".localhost"):
+        return True
+    try:
+        address = ipaddress.ip_address(hostname)
+    except ValueError:
+        # Do not resolve arbitrary hostnames: locality must be explicit and stable.
+        return False
+    if address.is_unspecified or address.is_multicast:
+        return False
+    return address.is_loopback or address.is_private or address.is_link_local
+
+
+def _validate_model_host(host: str, allow_remote_host: bool = False) -> str:
+    """Protect OCR-derived text from leaving the local network by default."""
+    cleaned = (host or "").rstrip("/")
+    if not cleaned:
+        raise ValueError("Model endpoint is required")
+    if not allow_remote_host and not is_local_model_host(cleaned):
+        raise ValueError(
+            "Remote model endpoints are disabled by default. "
+            "Set allow_remote_llm: true only when you intentionally want "
+            "OCR-derived document text sent to that endpoint."
+        )
+    return cleaned
 
 
 class LLMProvider(ABC):
@@ -71,9 +113,15 @@ class TransformersProvider(LLMProvider):
 class OllamaProvider(LLMProvider):
     """Ollama HTTP backend."""
 
-    def __init__(self, model: str, host: str = "http://localhost:11434", session: Optional[requests.Session] = None):
+    def __init__(
+        self,
+        model: str,
+        host: str = "http://localhost:11434",
+        session: Optional[requests.Session] = None,
+        allow_remote_host: bool = False,
+    ):
         super().__init__(model)
-        self.host = host.rstrip("/")
+        self.host = _validate_model_host(host, allow_remote_host=allow_remote_host)
         self.session = session or requests.Session()
 
     def generate(self, prompt: str, max_tokens: int = 128, temperature: float = 0.0) -> str:
@@ -121,9 +169,15 @@ class OllamaProvider(LLMProvider):
 class OpenAICompatibleProvider(LLMProvider):
     """Local OpenAI-compatible HTTP backend used by LM Studio and llama.cpp."""
 
-    def __init__(self, model: str, host: str, session: Optional[requests.Session] = None):
+    def __init__(
+        self,
+        model: str,
+        host: str,
+        session: Optional[requests.Session] = None,
+        allow_remote_host: bool = False,
+    ):
         super().__init__(model)
-        self.host = host.rstrip("/")
+        self.host = _validate_model_host(host, allow_remote_host=allow_remote_host)
         self.session = session or requests.Session()
 
     def generate(self, prompt: str, max_tokens: int = 128, temperature: float = 0.0) -> str:
@@ -191,8 +245,6 @@ class LMStudioProvider(OpenAICompatibleProvider):
                 timeout=60,
             )
             if response.status_code in {404, 405}:
-                # Older LM Studio releases do not expose the native REST API.
-                # Keep them usable through the stable OpenAI-compatible route.
                 return super().generate(prompt, max_tokens=max_tokens, temperature=temperature)
             response.raise_for_status()
             data = response.json()
@@ -202,7 +254,11 @@ class LMStudioProvider(OpenAICompatibleProvider):
         output = data.get("output") if isinstance(data, dict) else None
         if not isinstance(output, list):
             raise ValueError("LM Studio response did not include output messages")
-        messages = [item.get("content") for item in output if isinstance(item, dict) and item.get("type") == "message"]
+        messages = [
+            item.get("content")
+            for item in output
+            if isinstance(item, dict) and item.get("type") == "message"
+        ]
         if not messages:
             raise ValueError("LM Studio response did not include message content")
         if not all(isinstance(content, str) for content in messages):
@@ -223,6 +279,7 @@ def create_provider(
     model: str,
     host: Optional[str] = None,
     session: Optional[requests.Session] = None,
+    allow_remote_host: bool = False,
 ) -> LLMProvider:
     """Build a provider from MoneyPulse configuration."""
     normalized = (provider_id or "ollama").strip().lower()
@@ -232,17 +289,24 @@ def create_provider(
     if normalized in {"transformers", "huggingface", "local_transformers"}:
         return TransformersProvider(model=model or "microsoft/phi-2")
     if normalized == "ollama":
-        return OllamaProvider(model=model, host=host or DEFAULT_HOSTS["ollama"], session=session)
+        return OllamaProvider(
+            model=model,
+            host=host or DEFAULT_HOSTS["ollama"],
+            session=session,
+            allow_remote_host=allow_remote_host,
+        )
     if normalized == "lm_studio":
         return LMStudioProvider(
             model=model,
             host=host or DEFAULT_HOSTS[normalized],
             session=session,
+            allow_remote_host=allow_remote_host,
         )
     if normalized in {"lm_studio_ci", "llama_cpp"}:
         return OpenAICompatibleProvider(
             model=model,
             host=host or DEFAULT_HOSTS[normalized],
             session=session,
+            allow_remote_host=allow_remote_host,
         )
     raise ValueError(f"Unsupported LLM provider: {provider_id}")

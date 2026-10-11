@@ -3,6 +3,7 @@
 
 import logging
 import re
+from decimal import Decimal, InvalidOperation
 from typing import Any, Dict, List, Optional, Tuple
 
 from .llm_providers import LLMProvider, create_provider
@@ -42,6 +43,20 @@ class LLMParser:
         "unknown",
     }
 
+    AMOUNT_FIELDS = {"requested_amount", "annual_revenue", "processing_volume"}
+    DIGIT_FIELDS = {"ein_or_ssn", "contact_phone", "address_zip"}
+    APPLICATION_INDICATORS = (
+        "business name",
+        "merchant name",
+        "ein",
+        "tax id",
+        "requested funding",
+        "requested amount",
+        "address",
+        "phone",
+        "email",
+    )
+
     def __init__(
         self,
         model_name: str = "gemma4:e2b-it-qat",
@@ -50,6 +65,7 @@ class LLMParser:
         provider: str = "ollama",
         host: Optional[str] = None,
         provider_instance: Optional[LLMProvider] = None,
+        allow_remote_host: bool = False,
     ):
         requested_model = model or model_name
         resolved_host = host or ollama_host
@@ -59,6 +75,7 @@ class LLMParser:
             provider_id=self.provider_id,
             model=requested_model,
             host=resolved_host,
+            allow_remote_host=allow_remote_host,
         )
         self.model = self.provider.model
         self.host = resolved_host
@@ -128,6 +145,7 @@ class LLMParser:
         field: str,
         chunks: List[str],
     ) -> Tuple[str, List[Dict[str, Any]]]:
+        """Accept a model value only when it can be reconciled with its OCR chunk."""
         attempts: List[Dict[str, Any]] = []
         for chunk_index, chunk in enumerate(chunks):
             prompt = self._get_field_prompt(field, chunk)
@@ -144,9 +162,124 @@ class LLMParser:
                 }
             )
             cleaned = self._clean_response(raw_response, field)
-            if not self._is_missing_value(cleaned):
+            if self._is_missing_value(cleaned):
+                continue
+            if self._is_grounded(field, cleaned, chunk):
                 return cleaned, attempts
+            logger.warning(
+                "Discarded ungrounded model value for field=%s chunk=%s",
+                field,
+                chunk_index,
+            )
         return "", attempts
+
+    @staticmethod
+    def _normalize_text(value: str) -> str:
+        return " ".join(re.findall(r"[a-z0-9]+", (value or "").casefold()))
+
+    @staticmethod
+    def _digits(value: str) -> str:
+        return "".join(character for character in (value or "") if character.isdigit())
+
+    @staticmethod
+    def _parse_amount(value: str) -> Optional[Decimal]:
+        text = re.sub(r"[$,\s]", "", value or "")
+        if not re.fullmatch(r"[0-9]+(?:\.[0-9]{1,2})?", text):
+            return None
+        try:
+            amount = Decimal(text)
+        except InvalidOperation:
+            return None
+        return amount if amount.is_finite() else None
+
+    def _amount_is_grounded(self, field: str, value: str, source: str) -> bool:
+        target = self._parse_amount(value)
+        if target is None:
+            return False
+        keywords = {
+            "requested_amount": ("requested", "funding", "loan", "amount"),
+            "annual_revenue": ("annual revenue", "revenue"),
+            "processing_volume": ("processing", "volume"),
+        }.get(field, ())
+        pattern = re.compile(
+            r"(?<![A-Za-z0-9])\$?\s*(?:[0-9]{1,3}(?:,[0-9]{3})+|[0-9]+)(?:\.[0-9]{1,2})?"
+        )
+        normalized_source = source.casefold()
+        for match in pattern.finditer(source):
+            if self._parse_amount(match.group(0)) != target:
+                continue
+            start = max(0, match.start() - 80)
+            end = min(len(source), match.end() + 80)
+            context = normalized_source[start:end]
+            if not keywords or any(keyword in context for keyword in keywords):
+                return True
+        return False
+
+    def _digits_are_grounded(self, field: str, value: str, source: str) -> bool:
+        target = self._digits(value)
+        if not target:
+            return False
+        if field == "address_zip":
+            return any(
+                self._digits(candidate) == target
+                for candidate in re.findall(r"(?<!\d)\d{5}(?:-\d{4})?(?!\d)", source)
+            )
+        if field == "contact_phone":
+            candidates = re.findall(
+                r"(?<!\d)(?:\+?1[ .()-]*)?(?:\(?\d{3}\)?[ .-]*)\d{3}[ .-]*\d{4}(?!\d)",
+                source,
+            )
+            return any(self._digits(candidate)[-10:] == target[-10:] for candidate in candidates)
+        if field == "ein_or_ssn":
+            candidates = re.findall(
+                r"(?<!\d)(?:\d{2}-\d{7}|\d{3}-\d{2}-\d{4}|\d{9})(?!\d)",
+                source,
+            )
+            return any(self._digits(candidate) == target for candidate in candidates)
+        return False
+
+    def _is_grounded(self, field: str, value: str, source: str) -> bool:
+        """Verify that a proposed field value is supported by the OCR source chunk."""
+        if field in self.AMOUNT_FIELDS:
+            return self._amount_is_grounded(field, value, source)
+
+        if field in self.DIGIT_FIELDS:
+            return self._digits_are_grounded(field, value, source)
+
+        if field == "contact_email":
+            return value.strip().casefold() in source.casefold()
+
+        if field == "years_in_business":
+            candidate = value.strip()
+            match = re.search(
+                rf"(?<![0-9]){re.escape(candidate)}(?![0-9])",
+                source,
+            )
+            if not candidate or match is None:
+                return False
+            start = max(0, match.start() - 50)
+            end = min(len(source), match.end() + 50)
+            context = source[start:end].casefold()
+            return "year" in context and "business" in context
+
+        normalized_value = self._normalize_text(value)
+        normalized_source = self._normalize_text(source)
+        if not normalized_value:
+            return False
+
+        if field == "document_type":
+            if normalized_value in normalized_source:
+                return True
+            if normalized_value == "application":
+                matches = sum(
+                    1
+                    for indicator in self.APPLICATION_INDICATORS
+                    if indicator in normalized_source
+                )
+                return matches >= 2
+            return False
+
+        return normalized_value in normalized_source
 
     def _chunk_text(self, text: str, max_length: int = 512) -> List[str]:
         """Split text into word-bounded chunks, including very long paragraphs."""

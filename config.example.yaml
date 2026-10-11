@@ -2,6 +2,16 @@
 llm_provider: ollama
 llm_host: http://localhost:11434
 model: gemma4:e2b-it-qat
+
+# Local/private model endpoints are required by default. Set this to true only when
+# you intentionally want OCR-derived document text sent to a remote endpoint.
+allow_remote_llm: false
+
+# OCR resource ceilings. Increase deliberately for trusted larger documents.
+ocr_max_file_mb: 50
+ocr_max_pdf_pages: 100
+ocr_max_image_pixels: 40000000
+
 # For LM Studio, use llm_provider: lm_studio, port 1234, and its exact model ID.
 # Optional: absolute path to Tesseract if it is not on PATH.
 tesseract_path: null

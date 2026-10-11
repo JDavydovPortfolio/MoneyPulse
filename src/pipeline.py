@@ -7,7 +7,13 @@ from typing import Dict, List, Optional
 
 from .crm_submit import CRMSubmitter
 from .llm import LLMParser
-from .ocr import OCRProcessor, SUPPORTED_EXTENSIONS
+from .ocr import (
+    DEFAULT_MAX_FILE_SIZE_MB,
+    DEFAULT_MAX_IMAGE_PIXELS,
+    DEFAULT_MAX_PDF_PAGES,
+    OCRProcessor,
+    SUPPORTED_EXTENSIONS,
+)
 from .validator import DocumentValidator
 
 
@@ -17,14 +23,17 @@ class DocumentPipeline:
     def __init__(self, output_dir: str = "output", config: Optional[Dict] = None):
         self.output_dir = output_dir
         self.config = config or {}
-        self.ocr = OCRProcessor(tesseract_path=self.config.get("tesseract_path"))
+        self.ocr = self._build_ocr()
         self.llm = self._build_llm()
         self.validator = DocumentValidator()
         self.crm = CRMSubmitter(output_dir)
-        # Each pipeline owns its output log; never reuse another instance's file.
         self.logger = logging.Logger(__name__)
         self._setup_logging()
-        self._logging_cleanup = weakref.finalize(self, self._close_handlers, tuple(self.logger.handlers))
+        self._logging_cleanup = weakref.finalize(
+            self,
+            self._close_handlers,
+            tuple(self.logger.handlers),
+        )
 
     @staticmethod
     def _close_handlers(handlers):
@@ -35,12 +44,26 @@ class DocumentPipeline:
         """Release log handles when an embedding application finishes with this pipeline."""
         self._logging_cleanup()
 
+    def _build_ocr(self, config=None) -> OCRProcessor:
+        config = self.config if config is None else config
+        return OCRProcessor(
+            tesseract_path=config.get("tesseract_path"),
+            max_file_size_mb=config.get("ocr_max_file_mb", DEFAULT_MAX_FILE_SIZE_MB),
+            max_pdf_pages=config.get("ocr_max_pdf_pages", DEFAULT_MAX_PDF_PAGES),
+            max_image_pixels=config.get("ocr_max_image_pixels", DEFAULT_MAX_IMAGE_PIXELS),
+        )
+
     def _build_llm(self, config=None) -> LLMParser:
         config = self.config if config is None else config
         provider = config.get("llm_provider", "ollama")
         host = config.get("llm_host") or config.get("ollama_host")
         model = config.get("model", "gemma4:e2b-it-qat")
-        return LLMParser(provider=provider, host=host, model=model)
+        return LLMParser(
+            provider=provider,
+            host=host,
+            model=model,
+            allow_remote_host=config.get("allow_remote_llm") is True,
+        )
 
     def process_directory(self, input_dir: str, progress_callback=None) -> List[Dict]:
         if not os.path.exists(input_dir):
@@ -158,10 +181,18 @@ class DocumentPipeline:
         if not processed_documents:
             return {}
         total = len(processed_documents)
-        successful = sum(1 for document in processed_documents if document.get("processing_status") == "completed")
+        successful = sum(
+            1
+            for document in processed_documents
+            if document.get("processing_status") == "completed"
+        )
         failed = total - successful
         validation_stats = self.validator.get_validation_summary(
-            [document for document in processed_documents if document.get("processing_status") == "completed"]
+            [
+                document
+                for document in processed_documents
+                if document.get("processing_status") == "completed"
+            ]
         )
         submission_stats = self.crm.get_submission_stats()
         avg_processing_time = sum(
@@ -199,10 +230,21 @@ class DocumentPipeline:
         candidate = {**self.config, **new_config}
         ocr = self.ocr
         llm = self.llm
-        if {"llm_provider", "llm_host", "ollama_host", "model"}.intersection(new_config):
+        if {
+            "llm_provider",
+            "llm_host",
+            "ollama_host",
+            "model",
+            "allow_remote_llm",
+        }.intersection(new_config):
             llm = self._build_llm(candidate)
-        if "tesseract_path" in new_config:
-            ocr = OCRProcessor(tesseract_path=candidate["tesseract_path"])
+        if {
+            "tesseract_path",
+            "ocr_max_file_mb",
+            "ocr_max_pdf_pages",
+            "ocr_max_image_pixels",
+        }.intersection(new_config):
+            ocr = self._build_ocr(candidate)
         self.config = candidate
         self.ocr = ocr
         self.llm = llm
