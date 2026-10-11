@@ -9,6 +9,14 @@ MoneyPulse releases are evidence-based. A tag or GitHub release should only be c
 - Install Tesseract OCR and Poppler from the operating system package manager.
 - Do not place real merchant/applicant documents, credentials, local configuration, generated output, or logs in the checkout.
 
+On Windows, the automated portion of this checklist can be run in one command from a clean checkout:
+
+```powershell
+.\scripts\release-gate.ps1
+```
+
+That wrapper requires both Python 3.12 and 3.13, verifies Tesseract/Poppler are available, runs the fresh verifier under both interpreters, and runs the live local-model smoke test. It intentionally stops short of claiming release readiness until the manual desktop/privacy/documentation checks below are completed. `-SkipLiveModel` exists for development diagnostics only and prints that the result is insufficient for a release decision.
+
 ## 2. Fresh release gate
 
 Run the isolated verifier with both supported Python versions:
