@@ -1,4 +1,4 @@
 -r requirements.txt
 
-torch>=2.0.0
+torch>=2.14.1
 transformers>=4.36.0
