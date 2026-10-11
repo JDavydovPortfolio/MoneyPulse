@@ -1,8 +1,18 @@
 # Verification and audit record
 
-Date: **2026-09-29**. Scope: the September 29 hardening changes on top of baseline commit `a023d163c0fc0ece02b758cf2a026f4288c72168`.
+Date: **2026-09-29**, with an incremental hardening update on **2026-10-10/11**. The September 29 scope is the original release-hardening pass on top of baseline commit `a023d163c0fc0ece02b758cf2a026f4288c72168`; later evidence is called out separately below.
 
 This is a tested source baseline. It is not a claim that every operating system, model, financial-document layout, CRM deployment, or packaged binary has been certified.
+
+## October 2026 incremental hardening evidence
+
+The October hardening added deterministic source grounding for model-proposed values, local/private endpoint enforcement by default, OCR input/resource ceilings, and focused regression coverage for those boundaries.
+
+After the grounding/resource-limit changes, the targeted parser/provider/OCR/hardening regression run reported **45 passed** and source compilation passed. That targeted run is evidence for the changed components; it is not being represented as a replacement for the full fresh-environment gate recorded below.
+
+A GitHub-hosted workflow was then prepared to mirror the fresh verifier on Python 3.12/3.13 plus a core-only smoke job. The initial workflow run and one retry were accepted by GitHub Actions, but every job completed without a runner assignment (`runner_id: 0`) and with zero executed steps. No job logs existed because the jobs never started. Therefore **no passing hosted-CI result is claimed**. The workflow is kept manual-only until a GitHub-hosted runner can actually execute it.
+
+The last complete fresh-environment release-gate evidence remains the September 29 record below. Before creating a new release, run the current commit through the checklist in [RELEASE.md](RELEASE.md), including a fresh full verifier run and native target-platform check.
 
 ## Fresh install results
 
@@ -37,9 +47,11 @@ The independent core-only check installed `requirements-core.txt` with the same 
 
 ## Safety regressions
 
-New cases reproduced the prior defects before fixes: spreadsheet formula cells, truthy non-boolean approval, direct connector bypass, transmission after local-output failure, invalid provenance indices/counts, and malformed optional financial/contact values. The final suite also covers multi-page rendering, batch review, configuration persistence/write failure, processing reentry guards, and separate pipeline log destinations.
+September 29 cases reproduced the prior defects before fixes: spreadsheet formula cells, truthy non-boolean approval, direct connector bypass, transmission after local-output failure, invalid provenance indices/counts, and malformed optional financial/contact values. The suite also covers multi-page rendering, batch review, configuration persistence/write failure, processing reentry guards, and separate pipeline log destinations.
 
-These tests verify specific behavior, not complete security. Format validation does not prove a value appears in the original document. Human review is required for every model extraction.
+The October grounding layer adds a separate boundary: model-proposed values must reconcile with their OCR source chunk before they are propagated. Equivalent financial/contact formatting is normalized for comparison; unsupported guesses are discarded while raw attempts remain in provenance. This reduces plausible-looking hallucination propagation but does not prove OCR correctness or document authenticity. Human review remains required for every model extraction.
+
+These tests verify specific behavior, not complete security.
 
 ## Live-model evidence
 
@@ -59,18 +71,20 @@ python scripts/verify.py --fresh --live-model lm_studio
 
 ## Privacy/history audit
 
-The cloned repository exposed one branch (`main`) and **47 reachable commits** before this change. All **243 unique historical blobs** were inspected with targeted credential/path checks; **16 binary blobs** were legacy Python bytecode, whose printable strings were also examined. Current tracked paths were reviewed for documents, credentials, local configuration, generated outputs, and logs.
+The September 29 cloned repository exposed one branch (`main`) and **47 reachable commits** before that change. All **243 unique historical blobs** were inspected with targeted credential/path checks; **16 binary blobs** were legacy Python bytecode, whose printable strings were also examined. Current tracked paths were reviewed for documents, credentials, local configuration, generated outputs, and logs.
 
 - No matches were found for the checked GitHub tokens, AWS access-key IDs, OpenAI key formats, or private-key headers; targeted text checks also covered literal credential assignments.
 - No real financial documents or runtime output/log artifacts were found in the current tracked tree. The added screenshot uses fictional demo data.
 - Old history still contains machine-specific paths, a historical input-directory traceback, build/editor metadata, and Python bytecode. These have been removed from the current tree by earlier maintenance, but are not erased from history. No history rewrite was performed.
 - Current configuration, inputs, outputs, logs, and virtual environments remain ignored by git. The example configuration contains no credentials.
 
+The October commits reviewed here add source code, tests, documentation, configuration, and workflow files; they do not add merchant/applicant documents or runtime output. This incremental review does **not** claim that every historical blob was re-scanned after September 29. Run the current-tree and newly reachable-history audit in [RELEASE.md](RELEASE.md) before publishing a release.
+
 This was a targeted review of reachable cloned history, not proof that no secret has ever existed, not a scan of unreachable/deleted server objects, and not a compliance certification. If a real secret is discovered later, rotate it and assess history remediation; deleting it from HEAD is insufficient.
 
 ## Remaining deployment limits
 
-- Native Windows/macOS execution and packaged binaries were not freshly tested here. The Qt tests are offscreen Linux tests.
+- Native Windows/macOS execution and packaged binaries were not freshly tested in the recorded Linux verifier. The Qt tests are offscreen Linux tests.
 - No representative extraction-accuracy benchmark, handwriting/layout guarantee, or underwriting/compliance claim is made.
 - Transformers and deployment-specific external CRM integrations require their own dependencies, credentials, authenticated approval process, and end-to-end validation.
 - The desktop/CLI produce local artifacts; they do not offer a production approval audit trail or authenticated CRM submission UI.

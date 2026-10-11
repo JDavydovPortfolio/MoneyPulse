@@ -1,16 +1,16 @@
-name: CI
+name: Hosted verification (manual)
 
+# The repository-local verifier remains the release gate. The first hosted
+# attempts on 2026-10-11 were accepted by Actions but never assigned a runner,
+# so this workflow stays manual until a hosted run can actually execute.
 on:
-  push:
-    branches: [main]
-  pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: hosted-verification-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:

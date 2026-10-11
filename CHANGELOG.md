@@ -4,6 +4,18 @@ All notable MoneyPulse changes are documented here.
 
 ## [Unreleased]
 
+### October 2026 release-readiness hardening
+
+- Ground model-proposed extraction values against the OCR source before they can propagate into validated output; preserve rejected raw attempts in provenance for review.
+- Normalize equivalent amount/contact formatting during grounding while discarding unsupported model guesses.
+- Restrict HTTP model providers to explicit loopback/private/link-local endpoints by default; remote endpoints require deliberate `allow_remote_llm: true` configuration.
+- Add configurable OCR ceilings for input file size, PDF page count, and image/rendered-page pixels in addition to existing operation timeouts and one-page-at-a-time PDF rendering.
+- Add regression coverage for hallucinated field values, remote-endpoint opt-in, and OCR resource limits, and align parser tests with the new source-grounding contract.
+- Add an evidence-based release checklist covering fresh installs, core-only smoke tests, live-model checks, native desktop checks, privacy/history review, and documentation accuracy.
+- Prepare a manual GitHub-hosted verification workflow that mirrors the local release gate. Two initial hosted attempts were accepted by Actions but received no runner and executed zero steps, so no passing hosted-CI result is claimed.
+- Add Dependabot configuration for weekly Python and GitHub Actions dependency update proposals.
+- Replace overstated desktop-entry-point wording with a factual local-first description.
+
 ### September 29 release hardening
 
 - Neutralize spreadsheet formula prefixes in all CSV string cells while preserving original JSON values.
@@ -42,7 +54,7 @@ All notable MoneyPulse changes are documented here.
 - Added a real-Tesseract, fictional-data end-to-end demo with a deterministic fixture provider.
 - Added a cross-platform local release verifier (`scripts/verify.py` with Bash and PowerShell wrappers) that can create a fresh temporary environment, run GUI/OCR/tests/security linting, and optionally smoke-test a real Gemma 4 model through Ollama or LM Studio.
 - Created verifier environments through the active interpreter's `python -m venv`, covering relocatable Python distributions such as uv-managed runtimes.
-- Removed GitHub Actions workflows so hosted runners are no longer part of the MoneyPulse release gate.
+- Keep the repository-local verifier as the canonical release gate; hosted verification is supplemental and must not be reported as passing until a GitHub-hosted runner actually executes it.
 - Hardened malformed provider response handling, made failed provider configuration updates atomic, and ensured local output write failures are reported as processing failures.
 - Kept processing controls disabled until stopped work has exited, and made factual human review explicit for every model extraction.
 - Expanded deterministic regression coverage for schema, parser, provider, OCR, pipeline, and CRM boundaries.

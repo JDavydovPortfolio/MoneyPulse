@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-MoneyPulse - Enterprise Financial Document Intelligence
-AI-Powered Document Processing Pipeline - Main Entry Point
+MoneyPulse - local-first financial document processing
+Desktop application entry point.
 """
 
 import sys
