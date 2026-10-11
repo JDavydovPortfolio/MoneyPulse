@@ -27,13 +27,16 @@ PDF integration tests also require Poppler. HTTP integration tests start tempora
 
 Dependency updates should deliberately update the tested constraints, pass `pip check`, the fresh verifier, and a current `pip-audit` check. Database/network failures must not be recorded as a clean vulnerability audit. Keep verification scope and interpreter versions explicit in [VERIFICATION.md](docs/VERIFICATION.md).
 
+Release-oriented work must also follow the evidence requirements in [RELEASE.md](docs/RELEASE.md). A prepared workflow, stale verification record, or passing narrow test is not a substitute for running the current release candidate through the required fresh and target-platform checks.
+
 ## Contribution guidelines
 
 - Keep changes focused and reviewable.
 - Never commit real merchant/applicant documents, credentials, tax IDs, bank data, generated outputs, or logs.
 - Use synthetic/redacted fixtures only.
-- Treat all model output as untrusted and preserve structural validation, domain validation, provenance, and human-review boundaries.
+- Treat all model output as untrusted and preserve source grounding, structural validation, domain validation, provenance, and human-review boundaries.
 - Do not allow validation/review failures to flow automatically to external integrations.
+- Keep remote model/network behavior explicit. A change that permits OCR-derived text to leave the local/private environment must remain opt-in, be documented, and include regression coverage for the boundary.
 - Do not add fixed speed, accuracy, privacy, compliance, or security claims without reproducible evidence.
 - Keep hosted/cloud AI optional; local operation must remain viable.
 - Document new external services, credentials, network behavior, and system dependencies.

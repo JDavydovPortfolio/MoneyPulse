@@ -52,7 +52,13 @@ python -m pip install -r requirements.txt -c constraints-tested.txt
 python -m pip check
 ```
 
-Use `requirements-core.txt` for headless processing. `constraints-tested.txt` records the tested dependency versions and prevents accidental dependency drift; it is not a universal wheel lock or a guarantee for every OS/interpreter. Optional Transformers, CRM, and binary-build stacks have separate requirements and require separate deployment verification.
+Use `requirements-core.txt` for headless processing:
+
+```bash
+python -m pip install -r requirements-core.txt -c constraints-tested.txt
+```
+
+`constraints-tested.txt` records the tested dependency versions and prevents accidental dependency drift; it is not a universal wheel lock or a guarantee for every OS/interpreter. Optional Transformers, CRM, and binary-build stacks have separate requirements and require separate deployment verification.
 
 ## Local models
 
@@ -74,6 +80,12 @@ Download Gemma 4 E2B QAT GGUF; the previous live verification used Q4_0. Load it
 The app persists settings in local, git-ignored `config.yaml`. You can also copy `config.example.yaml` to `config.yaml` and edit the documented settings. Invalid settings fail explicitly. The desktop reports a saved-config error before using defaults.
 
 The native LM Studio chat route disables reasoning and storage. Older versions without that route use the OpenAI-compatible fallback; check your server's own logging/storage settings.
+
+### Model endpoint safety
+
+HTTP model endpoints are local/private by default. Loopback, explicit private-address, and link-local endpoints work without extra configuration. A public/remote model endpoint is rejected unless the operator deliberately sets `allow_remote_llm: true` in local `config.yaml`.
+
+Enabling `allow_remote_llm` means OCR-derived document text can be sent to that endpoint. Use it only as an explicit deployment choice and review the remote service's authentication, retention, logging, and data-handling policy. MoneyPulse does not silently fall back from a local provider to a remote one.
 
 ## Run and review
 
@@ -118,6 +130,7 @@ Exit codes: `0` means checks passed or all extractions completed and passed doma
 | Tesseract not found | Verify PATH in the current terminal or set `tesseract_path` in `config.yaml`. |
 | Cannot determine PDF page count | Run `pdfinfo -v`; check Poppler PATH and whether the PDF is corrupt or encrypted. Password-protected PDFs are not configured by this app. |
 | Provider/model unavailable | Start the API server; verify host/port and the exact model identifier. Auto-detect in the GUI can help. |
+| Remote model endpoint rejected | This is the default privacy boundary. Use a loopback/private/link-local endpoint, or set `allow_remote_llm: true` only when remote transmission is intentional. |
 | LM Studio works in chat but fails in MoneyPulse | Enable its API server, check the server model ID, and inspect sanitized server errors. |
 | Empty or incorrect OCR | Inspect source image quality, orientation, layout, and English OCR data. The app does not guarantee arbitrary layouts or handwriting. |
 | Validation failed | Inspect flagged values against the original. Missing optional fields stay empty; malformed values are not silently corrected. |
@@ -127,8 +140,11 @@ Exit codes: `0` means checks passed or all extractions completed and passed doma
 
 ## Release checks
 
+The canonical pre-tag checklist is [RELEASE.md](RELEASE.md). For the current release candidate, run the isolated verifier from a clean checkout with each supported Python version:
+
 ```bash
 python scripts/verify.py --fresh
+python3.13 scripts/verify.py --fresh
 ```
 
 The verifier installs the tested dependency constraints in a temporary environment. Optional security database check (requires network):
@@ -138,4 +154,4 @@ python -m pip install pip-audit -c constraints-tested.txt
 python -m pip_audit
 ```
 
-With a live model server, also run `python scripts/verify.py --fresh --live-model ollama` or `--live-model lm_studio`. See [VERIFICATION.md](VERIFICATION.md) for what was actually tested.
+With a live model server, also run `python scripts/verify.py --fresh --live-model ollama` or `--live-model lm_studio`. A desktop-oriented release additionally needs a native launch/workflow check on the target platform. See [VERIFICATION.md](VERIFICATION.md) for what was actually tested and [RELEASE.md](RELEASE.md) for the full evidence requirements.
