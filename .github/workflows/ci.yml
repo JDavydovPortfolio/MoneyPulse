@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release-gate:
+    name: Release gate (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install OCR system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends tesseract-ocr poppler-utils
+
+      - name: Run isolated release verifier
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python scripts/verify.py --fresh
+
+  core-only:
+    name: Headless core smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            requirements-minimal.txt
+            requirements-core.txt
+            constraints-tested.txt
+
+      - name: Install OCR system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends tesseract-ocr poppler-utils
+
+      - name: Install headless dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-core.txt -c constraints-tested.txt
+          python -m pip check
+
+      - name: Verify headless install stays lightweight
+        run: |
+          python - <<'PY'
+          import importlib.util
+          for optional in ("PySide6", "torch", "zeep"):
+              assert importlib.util.find_spec(optional) is None, f"unexpected optional dependency installed: {optional}"
+          PY
+
+      - name: Run CLI and synthetic OCR smoke
+        run: |
+          python -m src.cli --help
+          python examples/run_synthetic_demo.py
