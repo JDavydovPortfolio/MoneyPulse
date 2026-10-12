@@ -4,6 +4,12 @@ All notable MoneyPulse changes are documented here.
 
 ## [Unreleased]
 
+### v1.0.0 release-candidate preparation
+
+- Prepare formal v1.0.0 release notes and a release-candidate workflow around the repository-local verifier.
+- Make explicit that GitHub-hosted Actions are supplemental only and are not a prerequisite for publishing a source release.
+- Reserve the `v1.0.0` version for the first formal GitHub release; the 2025 project state is retained below as a historical pre-release baseline rather than presented as a published release.
+
 ### October 2026 release-readiness hardening
 
 - Ground model-proposed extraction values against the OCR source before they can propagate into validated output; preserve rejected raw attempts in provenance for review.
@@ -70,6 +76,6 @@ All notable MoneyPulse changes are documented here.
 - Reworked README/security/contributor guidance around local-first behavior and unsupported-claim removal.
 - Expanded `.gitignore` coverage and added synthetic examples/architecture documentation.
 
-## [v1.0.0] - 2025-08-06
+## Historical pre-release baseline - 2025-08-06
 
-Historical project notes describe the initial Windows-oriented desktop application, OCR pipeline, local-model experiments, validation, and CRM adapter code. No current GitHub release artifact is implied by this changelog entry; consult repository tags/releases directly before relying on a packaged version.
+Historical project notes describe the initial Windows-oriented desktop application, OCR pipeline, local-model experiments, validation, and CRM adapter code. No GitHub release artifact or semantic-versioned release is implied by this historical baseline.
