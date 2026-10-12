@@ -2,6 +2,10 @@
 
 MoneyPulse releases are evidence-based. A tag or GitHub release should only be created after the current commit passes the checks below. Historical verification is useful context, but it does not substitute for a fresh release candidate run.
 
+The repository-local verifier is the canonical release gate. GitHub Actions or any other hosted CI service may provide supplemental evidence, but a hosted workflow is **not required** to publish a MoneyPulse source release when the local gate and manual checks below are complete and recorded.
+
+For the first formal GitHub release, the intended version is `v1.0.0`. Draft release notes live in [RELEASE_NOTES_v1.0.0.md](RELEASE_NOTES_v1.0.0.md). Do not publish them or create the tag until the exact release-candidate commit has passed this checklist.
+
 ## 1. Clean checkout and environment
 
 - Start from a clean clone of the exact release commit.
@@ -83,11 +87,12 @@ Confirm that:
 - README installation commands match the actual dependency files and supported Python versions;
 - `CHANGELOG.md` describes shipped behavior rather than plans;
 - [SETUP.md](SETUP.md), [ARCHITECTURE.md](ARCHITECTURE.md), and [SECURITY.md](../SECURITY.md) match current behavior;
+- [RELEASE_NOTES_v1.0.0.md](RELEASE_NOTES_v1.0.0.md) matches the exact verified release candidate;
 - experimental or deployment-specific features are labeled as such;
 - no compliance, underwriting, accuracy, adoption, or performance claim exceeds the recorded evidence.
 
 ## 8. Release decision
 
-Only after the checks above pass should the maintainer choose a version, create a tag, and publish release notes. PyInstaller artifacts require their own target-platform build and smoke test before being attached to a release.
+Only after the checks above pass should the maintainer create the `v1.0.0` tag and publish the release notes. Record the exact release commit in the release notes and verification record before publishing. PyInstaller artifacts require their own target-platform build and smoke test before being attached to a release.
 
 A passing checklist means the tested source release is reproducible within the recorded scope. It does not certify every document layout, model, operating system, CRM deployment, security property, or regulatory requirement.
