@@ -14,7 +14,7 @@ flowchart TD
     E --> E2[LM Studio]
     E --> E3[llama.cpp]
     E --> E4[Transformers optional]
-    D --> F[Versioned extraction + provenance]
+    D --> F[Source-grounded versioned extraction + provenance]
     F --> G[Structural schema validation]
     G --> H[Domain validation]
     H --> I{Review state}
@@ -36,7 +36,7 @@ Defines the model-provider interface. Local HTTP providers use explicit request 
 
 ### `src/llm.py`
 
-Splits source text into word-bounded chunks and attempts each expected field across chunks. It records the raw response attempts used for provenance. Response cleanup strips only recognized field/answer prefixes, preserving legitimate colons inside values.
+Splits source text into word-bounded chunks and attempts each expected field across chunks. Model-proposed values must reconcile with the producing OCR chunk before propagation; unsupported guesses are discarded, and raw attempts remain in provenance. Response cleanup strips only recognized field/answer prefixes, preserving legitimate colons inside values.
 
 ### `src/schema.py`
 
@@ -73,7 +73,7 @@ The intended boundary is:
 ```text
 OCR text (source evidence)
     -> model response (untrusted)
-    -> parsed extraction (untrusted)
+    -> source-grounded extraction (still requires review)
     -> schema validation
     -> domain validation
     -> review state

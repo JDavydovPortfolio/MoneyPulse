@@ -2,13 +2,16 @@
 
 All notable MoneyPulse changes are documented here.
 
-## [Unreleased]
+## [1.0.0] - 2026-10-12
 
-### v1.0.0 release-candidate preparation
+### Source release and verification
 
-- Prepare formal v1.0.0 release notes and a release-candidate workflow around the repository-local verifier.
+- Add formal v1.0.0 release notes and a release workflow around the repository-local verifier.
 - Make explicit that GitHub-hosted Actions are supplemental only and are not a prerequisite for publishing a source release.
-- Reserve the `v1.0.0` version for the first formal GitHub release; the 2025 project state is retained below as a historical pre-release baseline rather than presented as a published release.
+- Use `v1.0.0` for the first formal source release; retain the 2025 project state below as a historical pre-release baseline.
+- Record fresh Windows Python 3.12/3.13 verification, real LM Studio smoke evidence, native desktop processing and local unapproved exports, and current-tree/reachable-history review.
+- Record the exact final tagged SHA in GitHub Release metadata after verification, avoiding an impossible tracked-file commit-SHA self-reference.
+- Align setup, architecture, and verification documentation with tested behavior and correct PowerShell command formatting.
 
 ### October 2026 release-readiness hardening
 

@@ -2,7 +2,7 @@
 
 ## System tools
 
-Use Python 3.12 or 3.13 and a virtual environment. The current verification host is Linux; Windows/macOS installation steps are provided for users, not claimed as fresh platform certification.
+Use Python 3.12 or 3.13 and a virtual environment. The v1.0.0 source candidate has fresh Windows verification and a native Windows desktop workflow check; the earlier Linux evidence is retained in [VERIFICATION.md](VERIFICATION.md). Native macOS execution and packaged binaries require separate checks.
 
 On Debian/Ubuntu:
 

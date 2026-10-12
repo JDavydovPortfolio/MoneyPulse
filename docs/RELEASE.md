@@ -93,6 +93,8 @@ Confirm that:
 
 ## 8. Release decision
 
-Only after the checks above pass should the maintainer create the `v1.0.0` tag and publish the release notes. Record the exact release commit in the release notes and verification record before publishing. PyInstaller artifacts require their own target-platform build and smoke test before being attached to a release.
+Commit all release fixes and release-relevant documentation before running the final checklist on that clean release candidate. Repository documentation may record the verification procedure and results, but must not try to embed the containing commit's own final SHA: editing a tracked file changes that SHA.
+
+Only after the checks above pass should the maintainer create the `v1.0.0` tag on that exact verified commit and publish the release notes. Record the exact tagged commit SHA and fresh verification summary in the GitHub Release body/metadata after verification. Do not modify the verified commit merely to insert its SHA; any later release-relevant change requires a new candidate and another full gate before tagging. PyInstaller artifacts require their own target-platform build and smoke test before being attached to a release.
 
 A passing checklist means the tested source release is reproducible within the recorded scope. It does not certify every document layout, model, operating system, CRM deployment, security property, or regulatory requirement.

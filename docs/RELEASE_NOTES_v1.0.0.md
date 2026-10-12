@@ -1,6 +1,6 @@
-# MoneyPulse v1.0.0 release notes (draft)
+# MoneyPulse v1.0.0
 
-> Draft only. Do not publish this as a GitHub Release until the exact release-candidate commit has completed the repository-local release gate and the manual checks in `docs/RELEASE.md`.
+This is a source release. Installation requires Python, Tesseract, Poppler, and a separately installed local model backend for live inference.
 
 MoneyPulse v1.0.0 is the first formal GitHub release of the modernized local-first financial-document processing pipeline.
 
@@ -11,7 +11,7 @@ MoneyPulse v1.0.0 is the first formal GitHub release of the modernized local-fir
 - Source-grounded extraction: model-proposed values must reconcile with the OCR source before they can propagate.
 - Versioned extraction schema plus deterministic structural and domain validation.
 - Explicit human-review states before downstream use; optional external CRM transmission remains separately gated.
-- Local JSON and spreadsheet-safe CSV output.
+- Local JSON and CSV output with formula-prefix escaping for string cells.
 - Desktop and headless CLI workflows.
 - Real-Tesseract synthetic demos that require no private financial documents and no model download.
 - Configurable OCR file/page/pixel limits and bounded PDF rendering.
@@ -21,7 +21,7 @@ MoneyPulse v1.0.0 is the first formal GitHub release of the modernized local-fir
 
 The canonical release gate is repository-local, not GitHub Actions. Hosted Actions are supplemental evidence only and are not a prerequisite to release.
 
-Before publishing v1.0.0, the exact release-candidate commit must complete:
+The exact tagged commit must complete the following checks before publication. The published GitHub Release body records its SHA and final verification results:
 
 1. Fresh verification under Python 3.12.
 2. Fresh verification under Python 3.13.
@@ -62,6 +62,6 @@ For the desktop application, install `requirements.txt` with `constraints-tested
 python main.py
 ```
 
-## Release-candidate commit
+## Tagged release commit
 
-TBD after the final release gate. Do not substitute a different commit after verification without rerunning the gate.
+The exact tagged commit SHA and fresh verification summary are recorded in the published GitHub Release body after the final committed candidate passes verification. This tracked document does not embed its containing commit's SHA. Do not substitute a different commit after verification without rerunning the gate.

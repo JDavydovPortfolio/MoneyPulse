@@ -2,7 +2,7 @@
 
 MoneyPulse is an experimental, local-first financial-document processing pipeline for Merchant Cash Advance (MCA) and related operational workflows. It combines OCR, configurable local model extraction, deterministic source/schema/domain validation, reviewable local output, and optional CRM adapters.
 
-> **Status:** experimental software with recorded fresh-install verification for the September 29 baseline and focused regression coverage for the October grounding/resource-limit hardening. Extracted values require human review. MoneyPulse does not make underwriting decisions or certify compliance. See the [verification record](docs/VERIFICATION.md) for tested scope and remaining limits.
+> **Status:** experimental software with fresh Windows verification on Python 3.12 and 3.13, a real local-model smoke test, and native desktop workflow evidence for the v1.0.0 source release. Extracted values require human review. MoneyPulse does not make underwriting decisions or certify compliance. See the [verification record](docs/VERIFICATION.md) for tested scope and remaining limits.
 
 **[Setup and troubleshooting](docs/SETUP.md)** · **[Architecture](docs/ARCHITECTURE.md)** · **[Release checklist](docs/RELEASE.md)** · **[Project brief](docs/PROJECT_BRIEF.md)** · **[Contributing](CONTRIBUTING.md)**
 
@@ -20,7 +20,7 @@ cd MoneyPulse
 python -m venv .venv
 ```
 
-Activate with `source .venv/bin/activate` on Linux/macOS or `.\\.venv\\Scripts\\Activate.ps1` in Windows PowerShell, then:
+Activate with `source .venv/bin/activate` on Linux/macOS or `.\.venv\Scripts\Activate.ps1` in Windows PowerShell, then:
 
 ```bash
 python -m pip install --upgrade pip
@@ -99,7 +99,9 @@ Python 3.12+ is required by the release verifier. Python 3.12 and 3.13 have reco
 
 On **2026-09-29**, the hardened baseline passed fresh desktop/development installs on Python **3.12.14** and **3.13.15**, including **91 tests**, `pip check`, compilation, real PDF/image OCR, offscreen GUI processing, the synthetic demo, and Bandit. A separate core-only install ran without PySide6, Torch, or Zeep. A `pip-audit` check reported no known vulnerabilities in the installed tested stack after pip was updated.
 
-The later October source-grounding/resource-limit change set passed a focused **45-test** regression run plus source compilation. The full fresh-environment gate has not yet been re-recorded for that later commit, so the September 29 run remains the last complete release-gate record. A prepared GitHub-hosted verifier was attempted twice on 2026-10-11, but GitHub assigned no runner and executed zero steps; no passing hosted-CI result is claimed. See [VERIFICATION.md](docs/VERIFICATION.md) and [RELEASE.md](docs/RELEASE.md).
+On **2026-10-12**, the v1.0.0 source candidate passed fresh Windows installs on Python **3.12.13** and **3.13.14**, with **108 tests and no skips** in each environment, dependency checks, compilation, the synthetic OCR demo, and Bandit. Real LM Studio inference with `gemma-4-e2b-it-qat` and a native Windows desktop workflow also passed; JSON/CSV output remained local and unapproved. The current tree and reachable history were reviewed for credentials and private/runtime material. The final tagged SHA and final gate results belong in the GitHub Release body; see [VERIFICATION.md](docs/VERIFICATION.md) and [RELEASE.md](docs/RELEASE.md) for scope and limits.
+
+A prepared GitHub-hosted verifier was attempted twice on 2026-10-11, but GitHub assigned no runner and executed zero steps; no passing hosted-CI result is claimed. Hosted Actions are supplemental only.
 
 Historical live-model smoke evidence from 2026-09-28 covers Ollama with `gemma4:e2b-it-qat` and LM Studio with `gemma-4-e2b-it-qat@q4_0`. Those are smoke tests, not accuracy or speed benchmarks.
 
@@ -242,7 +244,7 @@ The repository-local release verifier is the canonical release gate. It creates 
 python scripts/verify.py --fresh
 ```
 
-Linux/macOS users can also run `bash scripts/verify.sh --fresh`; Windows PowerShell users can run `.\\scripts\\verify.ps1 --fresh`. The non-`--fresh` form uses the currently active Python environment for faster development checks.
+Linux/macOS users can also run `bash scripts/verify.sh --fresh`; Windows PowerShell users can run `.\scripts\verify.ps1 --fresh`. The non-`--fresh` form uses the currently active Python environment for faster development checks.
 
 A manual GitHub Actions workflow mirrors the Python 3.12/3.13 fresh gate and core-only smoke path. It is supplemental evidence only; until a hosted runner actually executes it successfully, it is not a substitute for the repository-local verifier.
 
@@ -263,7 +265,7 @@ Before tagging or publishing a release, follow the full [release-readiness check
 - A live local-model smoke test is environment-dependent and separate from deterministic tests.
 - External CRM adapters require deployment-specific testing and credentials.
 - PyInstaller configurations are retained, but binary builds should not be treated as verified until built and tested on their target platform.
-- The latest October hardening has focused regression evidence but still needs a new full fresh-install/native-platform release pass before a new release is published.
+- The Windows source workflow is verified within the recorded scope; macOS native execution and packaged binaries require separate target-platform checks.
 
 ## Documentation
 

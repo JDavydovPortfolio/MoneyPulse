@@ -1,8 +1,35 @@
 # Verification and audit record
 
-Date: **2026-09-29**, with an incremental hardening update on **2026-10-10/11**. The September 29 scope is the original release-hardening pass on top of baseline commit `a023d163c0fc0ece02b758cf2a026f4288c72168`; later evidence is called out separately below.
+Date: **2026-10-12** for the v1.0.0 Windows source-release checks, with historical records from **2026-09-29** and **2026-10-10/11** retained below. The September 29 scope is the original release-hardening pass on top of baseline commit `a023d163c0fc0ece02b758cf2a026f4288c72168`.
 
 This is a tested source baseline. It is not a claim that every operating system, model, financial-document layout, CRM deployment, or packaged binary has been certified.
+
+## v1.0.0 Windows source-release evidence - October 12
+
+The source candidate was checked locally on Windows x86_64 (OS build 10.0.26200), PowerShell 7.6.6, with Tesseract 5.4.0.20240606, English OCR data, and Poppler 26.07.0. The first wrapper attempt failed because Tesseract was absent from PATH; the missing system tool was installed and checks were rerun. This infrastructure failure is not recorded as a test pass.
+
+| Check | Observed result |
+| --- | --- |
+| Python 3.12.13 fresh desktop/development install | Passed; 108 tests, no skips; pip check, compilation, synthetic OCR demo, Bandit |
+| Python 3.13.14 fresh desktop/development install | Passed; 108 tests, no skips; pip check, compilation, synthetic OCR demo, Bandit |
+| Independent fresh core-only install | pip check, CLI help, real synthetic OCR demo passed; PySide6, Torch, Transformers, Zeep absent |
+| Real local-model smoke | LM Studio 0.4.26 at localhost:1234, model identifier gemma-4-e2b-it-qat, locally installed Google Gemma 4 E2B QAT Q4_0 GGUF; all seven smoke checks passed |
+| Native Windows desktop | main.py launched; local provider/model settings saved and reloaded by an independently relaunched application; fictional image selected through the native file picker and processed with real OCR/model inference; JSON and CSV export succeeded locally |
+| Explicit review boundary | UI showed Ready For Review; generated JSON/CSV retained review_approved false and requires_human_review true; no extraction was approved or sent to a CRM |
+| Failure visibility | Unavailable default Ollama provider/model was reported in System Status before selecting the installed LM Studio backend |
+| Documentation review | README, setup, architecture, security, changelog, verification, release procedure, and v1.0.0 notes checked against source and observed behavior |
+
+The fresh verifier's GUI tests run offscreen; the separate native workflow above used the displayed Windows application and its actual worker/pipeline, without replacing inference with a fixture. The live backend initially stopped serving after startup; it was restarted, then real smoke processing passed. A single synthetic document is smoke evidence, not an extraction-accuracy or speed benchmark.
+
+These observations precede the final documentation commit. After all release-relevant files are committed, run `.\scripts\release-gate.ps1` again from a clean checkout of the resulting candidate. Its final tagged SHA and fresh gate summary must be recorded in the GitHub Release body, not inserted into the containing tracked commit. Any failing final gate blocks tagging/publication.
+
+### October 12 privacy/history audit
+
+Before the final documentation commit, the current tree had 74 tracked paths. All 306 unique blobs across 68 locally reachable commits were scanned for private-key headers, GitHub/AWS/OpenAI/Google/Slack token formats, JWTs, and literal credential assignments. Relative to the previously recorded audited commit `865bd4e876a2a25a5112c95a2a684f162d2b8879`, this included 20 newly reachable commits and 37 new blobs across local/fetched refs. No matches were found for those checks.
+
+Tracked paths, new-history paths, synthetic examples, and the fictional screenshot were reviewed for real documents, local configuration, and generated runtime artifacts. New history contains source/tests, dependency/workflow configuration, and documentation. The 17 binary blobs include legacy bytecode and the synthetic screenshot; raw binary content was included in the targeted pattern scan. Existing historical machine paths, editor/build metadata, and runtime tracebacks remain as described in the September record; no history rewrite was performed. Local config, synthetic outputs, logs, and virtual environments are ignored and excluded from the release tree.
+
+Repeat the current-tree and new-commit audit after the release documentation commit. The published Release body records that final check. This is a targeted audit of locally reachable history, not proof that secrets have never existed, a scan of unreachable server objects, or a privacy/security/compliance guarantee. No real secret requiring rotation was identified by these checks.
 
 ## October 2026 incremental hardening evidence
 
@@ -12,7 +39,7 @@ After the grounding/resource-limit changes, the targeted parser/provider/OCR/har
 
 A GitHub-hosted workflow was then prepared to mirror the fresh verifier on Python 3.12/3.13 plus a core-only smoke job. The initial workflow run and one retry were accepted by GitHub Actions, but every job completed without a runner assignment (`runner_id: 0`) and with zero executed steps. No job logs existed because the jobs never started. Therefore **no passing hosted-CI result is claimed**. The workflow is kept manual-only until a GitHub-hosted runner can actually execute it.
 
-The last complete fresh-environment release-gate evidence remains the September 29 record below. Before creating a new release, run the current commit through the checklist in [RELEASE.md](RELEASE.md), including a fresh full verifier run and native target-platform check.
+At the time of that October 10/11 update, the September 29 record below remained the last complete fresh gate. The October 12 Windows record above supersedes that gap. Every release still requires the current committed candidate to pass [RELEASE.md](RELEASE.md).
 
 ## Fresh install results
 
@@ -84,9 +111,9 @@ This was a targeted review of reachable cloned history, not proof that no secret
 
 ## Remaining deployment limits
 
-- Native Windows/macOS execution and packaged binaries were not freshly tested in the recorded Linux verifier. The Qt tests are offscreen Linux tests.
+- The historical Linux verifier did not test native Windows/macOS execution. October 12 adds a native Windows source workflow check; native macOS execution and packaged binaries remain outside that scope.
 - No representative extraction-accuracy benchmark, handwriting/layout guarantee, or underwriting/compliance claim is made.
 - Transformers and deployment-specific external CRM integrations require their own dependencies, credentials, authenticated approval process, and end-to-end validation.
 - The desktop/CLI produce local artifacts; they do not offer a production approval audit trail or authenticated CRM submission UI.
 - Vulnerability databases change. Re-audit dependencies when updating or preparing a release.
-- No GitHub release artifact or external adoption is implied by this source verification record.
+- External adoption is not implied by this source verification record. Published source releases and their exact commits are identified by GitHub Release metadata; packaged binaries require separate verification.
