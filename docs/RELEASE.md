@@ -98,3 +98,19 @@ Commit all release fixes and release-relevant documentation before running the f
 Only after the checks above pass should the maintainer create the `v1.0.0` tag on that exact verified commit and publish the release notes. Record the exact tagged commit SHA and fresh verification summary in the GitHub Release body/metadata after verification. Do not modify the verified commit merely to insert its SHA; any later release-relevant change requires a new candidate and another full gate before tagging. PyInstaller artifacts require their own target-platform build and smoke test before being attached to a release.
 
 A passing checklist means the tested source release is reproducible within the recorded scope. It does not certify every document layout, model, operating system, CRM deployment, security property, or regulatory requirement.
+
+## 9. Future maintainer signatures and release integrity
+
+The maintainer's MoneyPulse checkout is configured to sign commits and annotated tags by default using a dedicated SSH signing key registered with `JDavydovPortfolio`. These are local Git settings; another checkout must configure signing explicitly. Before a future release, verify the candidate commit and create and verify a signed tag, substituting the actual version:
+
+```bash
+git verify-commit HEAD
+git tag -s vX.Y.Z -m "MoneyPulse vX.Y.Z"
+git verify-tag vX.Y.Z
+```
+
+SSH verification requires a trusted `gpg.ssh.allowedSignersFile`. Follow [GitHub's signing configuration guidance](https://docs.github.com/en/authentication/managing-commit-signature-verification/telling-git-about-your-signing-key); keep private keys and local signing configuration outside the repository. Confirm GitHub reports the published signature as verified.
+
+Repository release immutability is enabled for future releases. Prepare a draft, attach any separately tested artifacts, check the exact tag and verification evidence, then publish. Publication locks the associated tag and release assets; assemble them before publishing. Signing does not replace the release gates above or establish software correctness.
+
+The original unsigned `v1.0.0` annotated tag and published release remain intact as historical evidence. Do not replace them to change a verification badge, and do not create a new version solely because signing is now configured.
