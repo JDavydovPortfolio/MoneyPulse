@@ -140,7 +140,7 @@ Exit codes: `0` means checks passed or all extractions completed and passed doma
 
 ## Release checks
 
-The canonical pre-tag checklist is [RELEASE.md](RELEASE.md). For the current release candidate, run the isolated verifier from a clean checkout with each supported Python version:
+For pre-release validation, run the isolated verifier from a clean checkout with each supported Python version:
 
 ```bash
 python scripts/verify.py --fresh
@@ -154,4 +154,4 @@ python -m pip install pip-audit -c constraints-tested.txt
 python -m pip_audit
 ```
 
-With a live model server, also run `python scripts/verify.py --fresh --live-model ollama` or `--live-model lm_studio`. A desktop-oriented release additionally needs a native launch/workflow check on the target platform. See [VERIFICATION.md](VERIFICATION.md) for what was actually tested and [RELEASE.md](RELEASE.md) for the full evidence requirements.
+With a live model server, also run `python scripts/verify.py --fresh --live-model ollama` or `--live-model lm_studio`. A desktop-oriented release additionally needs a native launch/workflow check on the target platform. See [VERIFICATION.md](VERIFICATION.md) for the recorded verification history.
