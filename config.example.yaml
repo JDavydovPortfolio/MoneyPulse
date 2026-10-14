@@ -7,17 +7,6 @@ model: qwen3:8b
 # you intentionally want OCR-derived document text sent to a remote endpoint.
 allow_remote_llm: false
 
-# Optional deterministic underwriting pre-screen policy.
-# Leave this empty to calculate underwriting metrics without a rule recommendation.
-underwriting_policy: {}
-# Example policy:
-# underwriting_policy:
-#   min_years_in_business: 2
-#   min_annual_revenue: 300000
-#   min_processing_volume: 30000
-#   max_request_to_annual_revenue: 0.20
-#   max_request_to_processing_volume: 2.0
-
 # OCR resource ceilings. Increase deliberately for trusted larger documents.
 ocr_max_file_mb: 50
 ocr_max_pdf_pages: 100
