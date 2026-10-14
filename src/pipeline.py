@@ -57,7 +57,7 @@ class DocumentPipeline:
         config = self.config if config is None else config
         provider = config.get("llm_provider", "ollama")
         host = config.get("llm_host") or config.get("ollama_host")
-        model = config.get("model", "gemma4:e2b-it-qat")
+        model = config.get("model", "qwen3:8b")
         return LLMParser(
             provider=provider,
             host=host,
