@@ -4,7 +4,7 @@
 
 MoneyPulse turns merchant applications and supporting financial documents into structured, source-backed data for analyst and underwriter review. It combines OCR, configurable local-model field extraction, source grounding, deterministic validation, local JSON/CSV output, and optional downstream CRM integrations.
 
-**Document → OCR → explicit source-field extraction → source evidence → validation → human review → deterministic derived calculations → downstream workflow**
+**Document → OCR → explicit source-field extraction → source evidence → validation → human review → downstream underwriting calculations/rules**
 
 **[Setup and troubleshooting](docs/SETUP.md)** · **[Architecture](docs/ARCHITECTURE.md)** · **[Project brief](docs/PROJECT_BRIEF.md)** · **[Contributing](CONTRIBUTING.md)**
 
@@ -20,7 +20,7 @@ Actual desktop screenshot using a generated fictional document and real Tesserac
 - Extracts fields such as merchant name, contact information, address, requested funding, and business information when those values are explicitly present in the source document.
 - Applies deterministic schema and domain validation.
 - Records source/provenance information so extracted values can be checked against the document.
-- Produces local JSON and CSV artifacts for review and downstream workflows.
+- Produces local JSON and CSV artifacts for analyst/underwriter review and downstream underwriting workflows.
 - Supports optional CRM integrations behind separate approval gates.
 
 MoneyPulse does **not** ask the local model to invent missing revenue, processing volume, years in business, or other financial facts. If a source document does not contain a supported value, the field remains missing rather than being inferred.
@@ -40,22 +40,13 @@ document
   -> each proposed value is checked against source text
   -> schema + domain validation
   -> analyst/underwriter review against source evidence
-  -> deterministic derived calculations on approved values
-  -> local output / optional downstream integration
+  -> local structured output
+  -> deterministic underwriting calculations/rules in the approved downstream workflow
 ```
 
 The distinction matters: source grounding can show that a proposed value appears in the OCR text. It does not prove that OCR read the document perfectly or that a merchant-reported figure is economically correct. Those questions remain part of review and underwriting.
 
-## Reviewed derived calculations
-
-`src/underwriting.py` contains only review-gated arithmetic. It does not make approval/decline recommendations and it does not infer source fields.
-
-Fresh extraction results are marked for review. Derived ratios are calculated only when a structured document has explicit `review_approved: true` and `review_state: approved` values. The current derived metrics are:
-
-- requested amount ÷ annual revenue;
-- requested amount ÷ processing volume.
-
-The inputs must already exist in the reviewed structured data. Missing values remain missing.
+MoneyPulse currently stops at source-backed extraction, validation, review state, and integration-ready output. It does not currently implement autonomous credit decisions or a generic underwriting policy engine. Any underwriting calculations or approval rules should operate on reviewed values under the lender/ISO's actual policy rather than on model guesses.
 
 ## Supported local-model providers
 
@@ -107,7 +98,7 @@ LM Studio users can load a compatible Qwen3 GGUF and start the local API server 
 
 The repository includes a deterministic demo built from fictional data. It creates an image, performs real OCR, runs the extraction/validation pipeline, and writes local output.
 
-The fixture intentionally demonstrates the trust boundary: if the deterministic test provider proposes a value that is not present in the generated OCR source, MoneyPulse rejects that value instead of accepting it merely because the provider returned it.
+The fixture demonstrates the trust boundary: if the deterministic test provider proposes a value that is not present in the generated OCR source, MoneyPulse rejects that value instead of accepting it merely because the provider returned it.
 
 ## Desktop application
 
@@ -182,9 +173,9 @@ The deterministic provider tests use generated fictional data and do not require
 
 ## Current scope
 
-MoneyPulse is focused on document intake, source-grounded structured extraction, validation, reviewable local output, and integration-ready data preparation for MCA workflows.
+MoneyPulse is focused on document intake, source-grounded structured extraction, validation, reviewable local output, and integration-ready data preparation for MCA underwriting workflows.
 
-It does not currently perform autonomous credit approval/decline decisions, infer missing merchant financial facts, or derive annual revenue/processing history from raw bank or processor statements without explicit source fields. Those capabilities would require dedicated deterministic financial-analysis logic and validated underwriting policy data rather than generic LLM inference.
+It does not currently infer missing merchant financial facts, derive annual revenue or processing history from raw statements without dedicated statement-analysis logic, or make autonomous approval/decline decisions.
 
 ## Documentation
 
