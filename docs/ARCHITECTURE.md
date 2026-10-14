@@ -1,6 +1,6 @@
 # MoneyPulse Architecture
 
-MoneyPulse is a local-first document-processing pipeline with explicit boundaries between OCR source text, model-assisted field extraction, source grounding, deterministic validation, human review, review-gated derived calculations, and optional downstream transmission.
+MoneyPulse is a local-first document-processing pipeline with explicit boundaries between OCR source text, model-assisted field extraction, source grounding, deterministic validation, human review, and optional downstream systems.
 
 ## Processing flow
 
@@ -19,11 +19,11 @@ flowchart TD
     G --> H[Domain validation]
     H --> I[Analyst / underwriter review against source evidence]
     I --> J[Local reviewable JSON / CSV]
-    I --> K{Explicitly approved?}
-    K -->|No| L[Derived calculations remain blocked]
-    K -->|Yes| M[Deterministic derived ratios]
-    M --> N[Optional downstream CRM workflow]
+    J --> K[Optional downstream CRM / underwriting workflow]
+    K --> L[Deterministic calculations and policy rules on reviewed data]
 ```
+
+MoneyPulse currently implements the path through reviewable structured output and optional integration. Lender- or ISO-specific underwriting calculations and approval rules belong after review, using approved values and real policy criteria rather than model inference.
 
 ## Components
 
@@ -53,17 +53,11 @@ Runs structural validation first, followed by deterministic domain checks for fi
 
 Domain validation checks format and internal consistency. It does not establish that OCR read every field perfectly or that a merchant-reported financial figure is economically correct; those questions remain part of human review.
 
-### `src/underwriting.py`
-
-Contains review-gated deterministic arithmetic only. It does not infer source fields and does not generate approval/decline recommendations.
-
-Fresh extraction results return an `awaiting_review` state. Derived ratios are calculated only when the structured record has explicit `review_approved: true` and `review_state: approved` values. Current derived metrics are requested amount relative to annual revenue and requested amount relative to processing volume. Missing reviewed inputs remain missing.
-
 ### `src/pipeline.py`
 
-Coordinates OCR, parsing, validation, review state, and local output. Freshly extracted documents are not treated as approved inputs. The pipeline exposes the review-gated derived-metrics state but does not bypass human review to calculate or act on financial ratios.
+Coordinates OCR, parsing, validation, review state, and local output. A validation failure remains a reviewable completed extraction; a structural/provider/OCR exception returns an explicit failed processing result.
 
-A validation failure remains a reviewable completed extraction; a structural/provider/OCR exception returns an explicit failed processing result.
+The pipeline does not infer missing financial facts and does not implement a generic autonomous underwriting decision engine.
 
 ### `src/crm_submit.py`
 
@@ -75,7 +69,7 @@ CSV string cells are escaped at serialization to reduce spreadsheet formula inje
 
 Contains the PySide6 desktop interface and a separate provider-discovery widget. The main configuration dialog supports the provider IDs consumed by the pipeline. Provider discovery remains separate to avoid coupling startup to scanning local services.
 
-The desktop interface shows OCR text, extracted fields, validation/review state, and the status of review-gated derived metrics. It does not present generic automated approval recommendations. Input/configuration changes and overlapping workers are blocked while processing is active.
+The main desktop shows OCR text, extracted fields, validation/review state, local-model configuration, and batch results. Input/configuration changes and overlapping workers are blocked while processing is active.
 
 ### `src/config.py` and `src/cli.py`
 
@@ -92,12 +86,13 @@ OCR text (source evidence)
     -> schema validation
     -> domain validation
     -> human review against source evidence
-    -> approved structured values
-    -> deterministic derived calculations
-    -> optional downstream integration
+    -> reviewed structured data
+    -> downstream deterministic calculations / policy rules
 ```
 
 A model response never becomes trusted merely because it parsed successfully. Source grounding only establishes support in OCR text; it does not prove document meaning or economic truth. Missing values are not supplied by model inference.
+
+For raw bank statements or processor statements, deriving revenue, deposit history, processing volume, or similar underwriting metrics requires dedicated statement-analysis logic; generic local-model extraction is not treated as a substitute.
 
 ## Provenance
 
