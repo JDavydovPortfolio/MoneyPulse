@@ -1,45 +1,23 @@
 # MoneyPulse v1.0.0
 
-This is a source release. Installation requires Python, Tesseract, Poppler, and a separately installed local model backend for live inference.
-
-MoneyPulse v1.0.0 is the first formal GitHub release of the modernized local-first financial-document processing pipeline.
+MoneyPulse v1.0.0 is the first formal GitHub release of the local-first financial-document processing platform built for Merchant Cash Advance and related underwriting and operations workflows.
 
 ## Highlights
 
-- Local-first OCR and model-assisted extraction for financial-document workflows.
-- Provider abstraction for Ollama, LM Studio, llama.cpp-compatible servers, and optional Transformers.
-- Source-grounded extraction: model-proposed values must reconcile with the OCR source before they can propagate.
-- Versioned extraction schema plus deterministic structural and domain validation.
-- Explicit human-review states before downstream use; optional external CRM transmission remains separately gated.
-- Local JSON and CSV output with formula-prefix escaping for string cells.
+- OCR and AI-assisted extraction for merchant applications and supporting financial documents.
+- Source-grounded extraction so proposed values are reconciled with OCR text before they are accepted.
+- Structured merchant, contact, business, funding, and document data for underwriting and operational review.
+- Deterministic schema and domain validation with explicit review states.
+- Local JSON and CSV output for downstream analysis and system integration.
+- Optional CRM adapters with controlled submission boundaries.
 - Desktop and headless CLI workflows.
-- Real-Tesseract synthetic demos that require no private financial documents and no model download.
-- Configurable OCR file/page/pixel limits and bounded PDF rendering.
-- Local/private model endpoints by default, with deliberate opt-in required for remote model endpoints.
+- Pluggable local-model backends through Ollama, LM Studio, llama.cpp-compatible servers, and optional Transformers.
+- Local/private model endpoints by default, with deliberate configuration required for remote endpoints.
+- Configurable OCR file, page, and image-size limits.
 
-## Verification model
+## Local AI
 
-The canonical release gate is repository-local, not GitHub Actions. Hosted Actions are supplemental evidence only and are not a prerequisite to release.
-
-The exact tagged commit must complete the following checks before publication. The published GitHub Release body records its SHA and final verification results:
-
-1. Fresh verification under Python 3.12.
-2. Fresh verification under Python 3.13.
-3. A real local-model smoke test through the intended backend.
-4. Native desktop launch and fictional-document processing on the target OS.
-5. Current-tree and newly reachable-history privacy/secret review.
-6. Documentation and release-note consistency review.
-
-See `docs/RELEASE.md` and `docs/VERIFICATION.md` for the evidence standard and recorded limits.
-
-## Important limits
-
-- MoneyPulse is experimental software, not an underwriting engine or compliance certification system.
-- Extracted values require human review.
-- Extraction quality depends on OCR quality, document layout, prompts, and the selected model.
-- No fixed extraction-accuracy or speed benchmark is claimed.
-- External CRM integrations require deployment-specific credentials, approval controls, and testing.
-- Packaged binary artifacts should only be attached after separate target-platform build and smoke testing.
+MoneyPulse supports configurable local models and does not depend on a single model family. The current default is Qwen3 8B through Ollama, with Qwen3 4B available as a lower-memory option. LM Studio users can select a compatible Qwen3 GGUF or another supported local model.
 
 ## Installation
 
@@ -62,6 +40,8 @@ For the desktop application, install `requirements.txt` with `constraints-tested
 python main.py
 ```
 
-## Tagged release commit
+## Workflow
 
-The exact tagged commit SHA and fresh verification summary are recorded in the published GitHub Release body after the final committed candidate passes verification. This tracked document does not embed its containing commit's SHA. Do not substitute a different commit after verification without rerunning the gate.
+MoneyPulse is designed to support analysts and underwriters by turning financial documents into structured, reviewable data. Human review remains part of the workflow so extracted information can be checked against source documents before downstream use.
+
+For architecture, setup, and implementation details, see the repository documentation.
