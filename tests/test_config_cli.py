@@ -11,7 +11,7 @@ from src.config import load_config, save_config
 
 def test_config_roundtrip_and_desktop_restart(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    config = {"llm_provider": "lm_studio", "llm_host": "http://localhost:1234", "model": "test-gemma"}
+    config = {"llm_provider": "lm_studio", "llm_host": "http://localhost:1234", "model": "test-qwen"}
     save_config(config)
     assert load_config() == config
     from PySide6.QtWidgets import QApplication
@@ -19,7 +19,7 @@ def test_config_roundtrip_and_desktop_restart(tmp_path, monkeypatch):
     app = QApplication.instance() or QApplication([])
     window = PremiumDocumentProcessor()
     assert window.pipeline.llm.provider_id == "lm_studio"
-    assert window.pipeline.llm.model == "test-gemma"
+    assert window.pipeline.llm.model == "test-qwen"
     assert window.pipeline.llm.provider.host == "http://localhost:1234"
     window.close()
     app.processEvents()
