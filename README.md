@@ -2,11 +2,11 @@
 
 MoneyPulse is a local-first financial-document processing pipeline for Merchant Cash Advance (MCA) and related operational workflows. It combines OCR, configurable local model extraction, deterministic source/schema/domain validation, reviewable local output, and optional CRM adapters.
 
-**[Setup and troubleshooting](docs/SETUP.md)** · **[Architecture](docs/ARCHITECTURE.md)** · **[Release checklist](docs/RELEASE.md)** · **[Project brief](docs/PROJECT_BRIEF.md)** · **[Contributing](CONTRIBUTING.md)**
+**[Setup and troubleshooting](docs/SETUP.md)** · **[Architecture](docs/ARCHITECTURE.md)** · **[Project brief](docs/PROJECT_BRIEF.md)** · **[Contributing](CONTRIBUTING.md)**
 
 ![MoneyPulse desktop processing a fictional merchant application](docs/images/moneypulse-demo.png)
 
-Actual desktop screenshot after real Tesseract OCR with the deterministic synthetic fixture provider. It demonstrates the review interface, not model accuracy.
+Actual desktop screenshot after real Tesseract OCR with the deterministic synthetic fixture provider.
 
 ## Try it in a few minutes
 
@@ -224,8 +224,6 @@ python -m pytest -q
 
 The deterministic test suite uses fakes for model-server behavior; it does not require downloading a large model or starting a live inference server. OCR integration tests use generated fictional images and require Tesseract.
 
-For full release checks, see [VERIFICATION.md](docs/VERIFICATION.md) and [RELEASE.md](docs/RELEASE.md).
-
 ## Current limitations
 
 - Extraction quality varies by OCR quality, document layout, prompts, and chosen model.
@@ -236,8 +234,6 @@ For full release checks, see [VERIFICATION.md](docs/VERIFICATION.md) and [RELEAS
 
 - [Architecture](docs/ARCHITECTURE.md)
 - [Setup and troubleshooting](docs/SETUP.md)
-- [Release readiness](docs/RELEASE.md)
-- [Verification and audit record](docs/VERIFICATION.md)
 - [Project brief](docs/PROJECT_BRIEF.md)
 - [Synthetic examples](examples/README.md)
 - [Contributing](CONTRIBUTING.md)
