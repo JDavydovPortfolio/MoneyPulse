@@ -15,7 +15,7 @@ Thanks for helping improve MoneyPulse.
 python scripts/verify.py
 ```
 
-Before release-oriented changes are considered complete, run the isolated gate:
+For a clean-environment verification run:
 
 ```bash
 python scripts/verify.py --fresh
@@ -25,19 +25,19 @@ OCR integration tests use generated fictional images and require Tesseract on th
 
 PDF integration tests also require Poppler. HTTP integration tests start temporary localhost servers; environments that block local socket binding need that permission to run the full suite. GUI tests use Qt's offscreen platform. Follow [SETUP.md](docs/SETUP.md) for platform tools and troubleshooting.
 
-Dependency updates should deliberately update the tested constraints, pass `pip check`, the fresh verifier, and a current `pip-audit` check. Database/network failures must not be recorded as a clean vulnerability audit. Keep verification scope and interpreter versions explicit in [VERIFICATION.md](docs/VERIFICATION.md).
-
-Release-oriented work must also follow the evidence requirements in [RELEASE.md](docs/RELEASE.md). A prepared workflow, stale verification record, or passing narrow test is not a substitute for running the current release candidate through the required fresh and target-platform checks.
+Dependency updates should deliberately update the tested constraints, pass `pip check`, the fresh verifier, and a current `pip-audit` check. Database/network failures must not be recorded as a clean vulnerability audit. Historical verification records live in [VERIFICATION.md](docs/VERIFICATION.md).
 
 ## Contribution guidelines
 
 - Keep changes focused and reviewable.
 - Never commit real merchant/applicant documents, credentials, tax IDs, bank data, generated outputs, or logs.
 - Use synthetic/redacted fixtures only.
-- Treat all model output as untrusted and preserve source grounding, structural validation, domain validation, provenance, and human-review boundaries.
-- Do not allow validation/review failures to flow automatically to external integrations.
-- Keep remote model/network behavior explicit. A change that permits OCR-derived text to leave the local/private environment must remain opt-in, be documented, and include regression coverage for the boundary.
-- Do not add fixed speed, accuracy, privacy, compliance, or security claims without reproducible evidence.
+- Treat model output as untrusted and preserve source grounding, structural validation, domain validation, and provenance.
+- Keep underwriting policy logic deterministic and separate from LLM-generated text. New underwriting rules must expose their inputs, thresholds, and rule outcomes.
+- Do not silently invent underwriting thresholds when policy configuration is absent.
+- Keep external CRM/network behavior explicit and configurable.
+- Keep remote model/network behavior explicit. A change that permits OCR-derived text to leave the local/private environment must remain opt-in and documented.
+- Do not add fixed speed, accuracy, privacy, compliance, adoption, or security claims without reproducible evidence.
 - Keep hosted/cloud AI optional; local operation must remain viable.
 - Document new external services, credentials, network behavior, and system dependencies.
 
