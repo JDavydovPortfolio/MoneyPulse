@@ -110,6 +110,8 @@ def test_synthetic_ocr_to_validated_local_output_end_to_end(tmp_path):
     assert result["validation_status"] == "passed"
     assert result["review_state"] == "ready_for_review"
     assert result["review_approved"] is False
+    assert result["underwriting"]["status"] == "ready"
+    assert result["underwriting"]["metrics"]["request_to_annual_revenue"] == 0.1429
     assert result["output_result"]["status"] == "prepared"
     assert result["output_result"]["destination"] == "local_only"
     assert result["processing_timestamp"]
