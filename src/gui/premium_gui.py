@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QGroupBox,
     QHBoxLayout,
+    QHeaderView,
     QLabel,
     QLineEdit,
     QListWidget,
@@ -30,7 +31,6 @@ from PySide6.QtWidgets import (
     QTreeWidgetItem,
     QVBoxLayout,
     QWidget,
-    QHeaderView,
 )
 
 from src.config import load_config, save_config
@@ -81,7 +81,7 @@ class DropArea(QLabel):
         self.setText(
             "Drag & Drop Financial Documents Here\n\n"
             "Supported: PDF, PNG, JPG, JPEG\n\n"
-            "OCR • Local AI • Validation • Underwriting Pre-screen"
+            "OCR • Local AI • Source Grounding • Validation"
         )
         self._normal_style()
 
@@ -137,7 +137,7 @@ class DropArea(QLabel):
 
 
 class PremiumDocumentProcessor(QMainWindow):
-    """MoneyPulse desktop workflow for extraction and underwriting pre-screening."""
+    """MoneyPulse desktop workflow for source-grounded document extraction and review."""
 
     def __init__(self):
         super().__init__()
@@ -285,12 +285,12 @@ class PremiumDocumentProcessor(QMainWindow):
         self.tab_widget.addTab(self.data_tree, "Extracted Data")
 
         self.underwriting_tree = QTreeWidget()
-        self.underwriting_tree.setHeaderLabels(["Underwriting Signal", "Value", "Result"])
+        self.underwriting_tree.setHeaderLabels(["Reviewed Metric", "Value", "Status"])
         self.underwriting_tree.setAlternatingRowColors(True)
         self.underwriting_tree.header().setSectionResizeMode(0, QHeaderView.ResizeToContents)
         self.underwriting_tree.header().setSectionResizeMode(1, QHeaderView.Stretch)
         self.underwriting_tree.header().setSectionResizeMode(2, QHeaderView.ResizeToContents)
-        self.tab_widget.addTab(self.underwriting_tree, "Underwriting")
+        self.tab_widget.addTab(self.underwriting_tree, "Derived Metrics")
 
         self.validation_list = QListWidget()
         self.tab_widget.addTab(self.validation_list, "Validation Results")
@@ -524,50 +524,33 @@ class PremiumDocumentProcessor(QMainWindow):
         self._populate_validation(result)
 
     def _populate_underwriting(self, underwriting: Dict):
-        if not underwriting:
+        status = underwriting.get("status", "awaiting_review") if underwriting else "awaiting_review"
+        if status != "calculated":
             self.underwriting_tree.addTopLevelItem(
-                QTreeWidgetItem(["Underwriting", "No pre-screen data", ""])
+                QTreeWidgetItem(
+                    [
+                        "Derived calculations",
+                        "Awaiting human review",
+                        "Not calculated",
+                    ]
+                )
             )
             return
 
-        recommendation = underwriting.get("preliminary_recommendation", "not_configured")
-        summary = QTreeWidgetItem(
-            [
-                "Pre-screen Recommendation",
-                recommendation.replace("_", " ").title(),
-                underwriting.get("mode", "signals_only"),
-            ]
-        )
-        self.underwriting_tree.addTopLevelItem(summary)
+        inputs_item = QTreeWidgetItem(["Reviewed Inputs", "", "Approved"])
+        self.underwriting_tree.addTopLevelItem(inputs_item)
+        for key, value in (underwriting.get("inputs", {}) or {}).items():
+            display = "Not available" if value is None else str(value)
+            inputs_item.addChild(
+                QTreeWidgetItem([key.replace("_", " ").title(), display, "Reviewed"])
+            )
 
-        metrics_item = QTreeWidgetItem(["Metrics", "", underwriting.get("status", "")])
+        metrics_item = QTreeWidgetItem(["Derived Ratios", "", "Calculated"])
         self.underwriting_tree.addTopLevelItem(metrics_item)
         for key, value in (underwriting.get("metrics", {}) or {}).items():
             display = "Not available" if value is None else str(value)
             metrics_item.addChild(
                 QTreeWidgetItem([key.replace("_", " ").title(), display, ""])
-            )
-
-        rules_item = QTreeWidgetItem(["Policy Rules", "", ""])
-        self.underwriting_tree.addTopLevelItem(rules_item)
-        rules = underwriting.get("rules", []) or []
-        if not rules:
-            rules_item.addChild(
-                QTreeWidgetItem(
-                    ["No policy thresholds configured", "Signals calculated only", ""]
-                )
-            )
-        for rule in rules:
-            actual = rule.get("actual")
-            threshold = rule.get("threshold")
-            rules_item.addChild(
-                QTreeWidgetItem(
-                    [
-                        str(rule.get("rule", "")).replace("_", " ").title(),
-                        f"actual={actual} / threshold={threshold}",
-                        str(rule.get("result", "")).replace("_", " ").title(),
-                    ]
-                )
             )
         self.underwriting_tree.expandAll()
 
@@ -589,7 +572,7 @@ class PremiumDocumentProcessor(QMainWindow):
         review_item.setIcon(qta.icon("fa5s.user-check"))
         self.validation_list.addItem(review_item)
         self.validation_list.addItem(
-            "Compare extracted values and underwriting signals with source documents before downstream use."
+            "Compare extracted values with the source document before downstream use."
         )
 
         issues = result.get("flagged_issues", []) or []
@@ -646,19 +629,6 @@ class PremiumDocumentProcessor(QMainWindow):
             self.status_text.append(f"{icon} {component.upper()}: {result['details']}")
         self.status_text.append("\nTest completed.")
 
-    @staticmethod
-    def _optional_number(text: str, label: str):
-        value = text.strip()
-        if not value:
-            return None
-        try:
-            number = float(value)
-        except ValueError as exc:
-            raise ValueError(f"{label} must be numeric") from exc
-        if number < 0:
-            raise ValueError(f"{label} cannot be negative")
-        return number
-
     def show_configuration(self):
         if self.processing_active:
             return
@@ -666,7 +636,7 @@ class PremiumDocumentProcessor(QMainWindow):
         dialog = QDialog(self)
         dialog.setWindowTitle("MoneyPulse Configuration")
         dialog.setModal(True)
-        dialog.resize(560, 560)
+        dialog.resize(560, 420)
         layout = QVBoxLayout(dialog)
         detector = LLMProviderDetector()
 
@@ -744,29 +714,9 @@ class PremiumDocumentProcessor(QMainWindow):
         model_layout.addRow("", detect_button)
         layout.addWidget(model_group)
 
-        policy_group = QGroupBox("Underwriting Pre-screen Policy (optional)")
-        policy_layout = QFormLayout(policy_group)
-        current_policy = self.pipeline.config.get("underwriting_policy", {}) or {}
-        fields = {}
-        policy_specs = [
-            ("min_years_in_business", "Minimum years in business"),
-            ("min_annual_revenue", "Minimum annual revenue"),
-            ("min_processing_volume", "Minimum processing volume"),
-            ("max_request_to_annual_revenue", "Max request / annual revenue"),
-            ("max_request_to_processing_volume", "Max request / processing volume"),
-        ]
-        for key, label in policy_specs:
-            edit = QLineEdit()
-            if key in current_policy:
-                edit.setText(str(current_policy[key]))
-            edit.setPlaceholderText("Leave blank to disable this rule")
-            fields[key] = edit
-            policy_layout.addRow(f"{label}:", edit)
-        layout.addWidget(policy_group)
-
         note = QLabel(
-            "Recommended local default: Qwen3 8B. Underwriting thresholds are deterministic business-policy rules, "
-            "not LLM-generated criteria. Leave policy fields blank to calculate underwriting signals without a rule recommendation."
+            "Recommended local default: Qwen3 8B. The model proposes structured fields from OCR text; "
+            "MoneyPulse checks proposed values against the source and does not use the model to invent missing financial facts."
         )
         note.setWordWrap(True)
         layout.addWidget(note)
@@ -779,18 +729,12 @@ class PremiumDocumentProcessor(QMainWindow):
         if dialog.exec() != QDialog.Accepted:
             return
 
+        new_config = {
+            "llm_provider": provider_combo.currentData(),
+            "llm_host": host_edit.text().strip(),
+            "model": model_edit.text().strip(),
+        }
         try:
-            policy = {}
-            for key, label in policy_specs:
-                value = self._optional_number(fields[key].text(), label)
-                if value is not None:
-                    policy[key] = value
-            new_config = {
-                "llm_provider": provider_combo.currentData(),
-                "llm_host": host_edit.text().strip(),
-                "model": model_edit.text().strip(),
-                "underwriting_policy": policy,
-            }
             self.pipeline.update_config(new_config)
         except Exception as exc:
             QMessageBox.warning(self, "Configuration Error", str(exc))
@@ -805,8 +749,7 @@ class PremiumDocumentProcessor(QMainWindow):
                 f"Settings apply for this session but could not be saved.\n{exc}",
             )
         self.log_message(
-            f"Configuration updated: {new_config['llm_provider']} / {new_config['model']} / "
-            f"{len(policy)} underwriting rule(s)"
+            f"Configuration updated: {new_config['llm_provider']} / {new_config['model']}"
         )
 
     def show_about(self):
@@ -818,10 +761,10 @@ class PremiumDocumentProcessor(QMainWindow):
             <p>MCA underwriting document intelligence</p>
             <ul>
               <li>OCR extraction from merchant documents</li>
-              <li>Local AI structured-data extraction</li>
-              <li>Source-grounded and deterministic validation</li>
-              <li>Underwriting metrics and configurable pre-screen rules</li>
-              <li>Reviewable local output and optional CRM integration</li>
+              <li>Local AI structured-field extraction</li>
+              <li>Source-grounded deterministic validation</li>
+              <li>Analyst/underwriter review of extracted values</li>
+              <li>Review-gated derived ratios and optional downstream integration</li>
             </ul>
             <p><b>Local-first by design.</b> OCR and model inference can remain on the operator's machine or private network.</p>
             """,
