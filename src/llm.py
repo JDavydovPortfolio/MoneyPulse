@@ -59,7 +59,7 @@ class LLMParser:
 
     def __init__(
         self,
-        model_name: str = "gemma4:e2b-it-qat",
+        model_name: str = "qwen3:8b",
         ollama_host: Optional[str] = None,
         model: Optional[str] = None,
         provider: str = "ollama",
