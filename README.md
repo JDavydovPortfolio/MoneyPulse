@@ -2,8 +2,6 @@
 
 MoneyPulse is an experimental, local-first financial-document processing pipeline for Merchant Cash Advance (MCA) and related operational workflows. It combines OCR, configurable local model extraction, deterministic source/schema/domain validation, reviewable local output, and optional CRM adapters.
 
-> **Status:** experimental software with fresh Windows verification on Python 3.12 and 3.13, a real local-model smoke test, and native desktop workflow evidence for the v1.0.0 source release. Extracted values require human review. MoneyPulse does not make underwriting decisions or certify compliance. See the [verification record](docs/VERIFICATION.md) for tested scope and remaining limits.
-
 **[Setup and troubleshooting](docs/SETUP.md)** · **[Architecture](docs/ARCHITECTURE.md)** · **[Release checklist](docs/RELEASE.md)** · **[Project brief](docs/PROJECT_BRIEF.md)** · **[Contributing](CONTRIBUTING.md)**
 
 ![MoneyPulse desktop processing a fictional merchant application](docs/images/moneypulse-demo.png)
