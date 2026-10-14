@@ -4,21 +4,22 @@ All notable MoneyPulse changes are documented here.
 
 ## Unreleased
 
-### Underwriting workflow
+### Source-grounded underwriting workflow support
 
-- Add a deterministic underwriting pre-screen engine that calculates requested-funding, annual-revenue, processing-volume, years-in-business, and funding-ratio signals from validated merchant data.
-- Add optional configurable policy thresholds for minimum years in business, minimum annual revenue, minimum processing volume, maximum request-to-revenue ratio, and maximum request-to-processing-volume ratio.
-- Return auditable rule outcomes with `advance`, `manual_review`, or `needs_more_data` pre-screen recommendations when an operator supplies policy thresholds; without a policy, MoneyPulse calculates signals without inventing approval criteria.
-- Integrate underwriting results into the document pipeline, desktop UI, and local JSON output.
-- Add an Underwriting tab and underwriting-policy controls to the desktop configuration dialog.
-- Add deterministic regression tests for underwriting metrics, rules, missing-data handling, pipeline integration, local JSON persistence, and the desktop underwriting view.
+- Keep the local model in a field-extraction role: proposed values must be supported by OCR source text before they can propagate.
+- Reject unsupported annual-revenue, processing-volume, years-in-business, funding, and other optional field proposals instead of inferring missing merchant facts.
+- Replace the earlier generic pre-screen recommendation layer with review-gated deterministic arithmetic only.
+- Require explicit human approval before derived underwriting ratios are calculated.
+- Keep missing reviewed inputs missing rather than estimating them.
+- Update tests so the synthetic fixture proves that model-proposed financial values absent from the OCR source are rejected.
+- Remove generic `advance`, `manual_review`, and `needs_more_data` recommendation semantics and remove configurable underwriting-policy thresholds introduced earlier in this unreleased cycle.
 
 ### Local AI and public positioning
 
 - Change the default local extraction model to Qwen3 8B, with Qwen3 4B as the lower-memory fallback.
 - Replace current user-facing Gemma setup recommendations with Qwen3 guidance while preserving historical verification notes as historical records.
-- Refocus the README on MoneyPulse's actual MCA underwriting and operations workflow: OCR, local AI extraction, source grounding, validation, underwriting pre-screening, review, and CRM-ready output.
-- Remove public-facing wording that incorrectly positioned MoneyPulse as unrelated to underwriting.
+- Refocus the README on MoneyPulse's actual MCA workflow: OCR, source-backed field extraction, deterministic validation, analyst/underwriter review, review-gated derived calculations, and downstream data preparation.
+- Make explicit that the model is not used to invent missing merchant financial facts or act as an autonomous underwriting decision engine.
 
 ## [1.0.0] - 2026-10-12
 
