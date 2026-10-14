@@ -1,6 +1,6 @@
 # MoneyPulse
 
-MoneyPulse is an experimental, local-first financial-document processing pipeline for Merchant Cash Advance (MCA) and related operational workflows. It combines OCR, configurable local model extraction, deterministic source/schema/domain validation, reviewable local output, and optional CRM adapters.
+MoneyPulse is a local-first financial-document processing pipeline for Merchant Cash Advance (MCA) and related operational workflows. It combines OCR, configurable local model extraction, deterministic source/schema/domain validation, reviewable local output, and optional CRM adapters.
 
 **[Setup and troubleshooting](docs/SETUP.md)** · **[Architecture](docs/ARCHITECTURE.md)** · **[Release checklist](docs/RELEASE.md)** · **[Project brief](docs/PROJECT_BRIEF.md)** · **[Contributing](CONTRIBUTING.md)**
 
