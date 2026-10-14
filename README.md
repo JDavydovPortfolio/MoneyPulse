@@ -46,6 +46,19 @@ document
 
 The local model acts as a field-extraction aid. MoneyPulse independently checks proposed values against OCR text before allowing them to propagate through the pipeline.
 
+## Why use a local model?
+
+OCR answers **what text is on the page**. It does not reliably answer **which pieces of that text belong in which structured business fields** when forms, labels, ordering, and layouts vary across ISOs and document types.
+
+The local model is used only for that semantic mapping step: it proposes values for fields such as merchant name, requested amount, address, annual revenue, years in business, or processing volume when those values are explicitly present in the OCR text. MoneyPulse then checks the proposal against the source text before accepting it.
+
+This gives MoneyPulse two practical advantages:
+
+- **Template flexibility:** different forms can use different labels and layouts without requiring a custom parser for every document template.
+- **Local handling of sensitive data:** inference can run on the operator's machine or private network instead of requiring merchant document text to be sent to a hosted AI API.
+
+The model is not used to invent missing financial facts, estimate revenue from a raw bank statement, calculate merchant risk, or make an approval/decline decision. Known rigid templates can also be handled with deterministic extraction; the local model is most useful when document wording and layout vary.
+
 ## Supported local-model providers
 
 | Provider | Mode | Default endpoint |
