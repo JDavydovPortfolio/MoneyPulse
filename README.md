@@ -26,7 +26,7 @@ python -m pip install -r requirements-core.txt -c constraints-tested.txt
 python examples/run_synthetic_demo.py
 ```
 
-The demo creates a fictional document, runs real OCR, validates fixture output, and saves local JSON under `output/synthetic_demo/`. Look for `completed`, `passed`, and `ready_for_review`. It verifies the pipeline without pretending to evaluate a model.
+The demo creates a fictional document, runs real OCR, validates fixture output, and saves local JSON under `output/synthetic_demo/`. Look for `completed`, `passed`, and `ready_for_review`.
 
 For the desktop application, install `requirements.txt` with the same constraints, start Ollama or LM Studio with your model, and run `python main.py`.
 
@@ -67,14 +67,14 @@ HTTP model endpoints are restricted to explicit loopback/private/link-local addr
 
 ### Recommended local AI setup
 
-For the easiest setup, MoneyPulse recommends **Gemma 4 E2B QAT** because that smaller model has recorded end-to-end smoke-test evidence through both Ollama and LM Studio. Tesseract performs OCR; the local model's job is to map OCR text into MoneyPulse's structured schema. The extraction layer remains provider-independent.
+MoneyPulse defaults to **Qwen3 8B** for local extraction. It is available through Ollama as a roughly 5.2 GB Q4_K_M model and is a practical fit for consumer GPUs while providing substantially more capability than the previous ultra-small default. For lower-memory systems, **Qwen3 4B** is the fallback. Tesseract performs OCR; the local model maps OCR text into MoneyPulse's structured schema.
 
-- **Ollama:** run `ollama pull gemma4:e2b-it-qat`, start Ollama, and keep the default endpoint `http://localhost:11434`.
-- **LM Studio:** download a Gemma 4 E2B QAT GGUF (the Q4_0 variant was verified), start LM Studio's local API server, and use `http://localhost:1234`. MoneyPulse auto-detects the model identifier exposed by LM Studio.
+- **Ollama:** run `ollama pull qwen3:8b`, start Ollama, and keep the default endpoint `http://localhost:11434`.
+- **LM Studio:** download a Qwen3 8B GGUF, start LM Studio's local API server, and use `http://localhost:1234`. MoneyPulse uses the model identifier exposed by LM Studio.
 
-The desktop configuration dialog includes **Auto-detect Ollama / LM Studio**. Advanced users can select another compatible local model, including larger Gemma variants, without changing Python source code.
+The desktop configuration dialog includes **Auto-detect Ollama / LM Studio**. Advanced users can select another compatible local model without changing Python source code.
 
-The desktop application defaults to Ollama with `gemma4:e2b-it-qat`. MoneyPulse does not pull model weights automatically. If the configured provider or model is unavailable, component checks and processing fail explicitly rather than silently substituting data.
+MoneyPulse does not pull model weights automatically. If the configured provider or model is unavailable, component checks and processing fail explicitly rather than silently substituting data.
 
 ## Requirements
 
@@ -83,7 +83,7 @@ MoneyPulse needs the following system tools for document OCR:
 - Tesseract OCR;
 - Poppler for PDF rendering through `pdf2image`.
 
-Python 3.12+ is required by the release verifier. Python 3.12 and 3.13 have recorded verification; newer interpreter versions require their own checks. Python dependency sets are separated by purpose:
+Python **3.12 or 3.13** is recommended. Python dependency sets are separated by purpose:
 
 - `requirements-minimal.txt` — OCR modules only;
 - `requirements-core.txt` — headless pipeline plus local HTTP model providers;
@@ -92,16 +92,6 @@ Python 3.12+ is required by the release verifier. Python 3.12 and 3.13 have reco
 - `requirements-crm.txt` — optional SOAP/OAuth CRM dependencies;
 - `requirements-dev.txt` — tests and security linting;
 - `requirements-build.txt` — PyInstaller tooling.
-
-### Verification environment
-
-On **2026-09-29**, the hardened baseline passed fresh desktop/development installs on Python **3.12.14** and **3.13.15**, including **91 tests**, `pip check`, compilation, real PDF/image OCR, offscreen GUI processing, the synthetic demo, and Bandit. A separate core-only install ran without PySide6, Torch, or Zeep. A `pip-audit` check reported no known vulnerabilities in the installed tested stack after pip was updated.
-
-On **2026-10-12**, the v1.0.0 source candidate passed fresh Windows installs on Python **3.12.13** and **3.13.14**, with **108 tests and no skips** in each environment, dependency checks, compilation, the synthetic OCR demo, and Bandit. Real LM Studio inference with `gemma-4-e2b-it-qat` and a native Windows desktop workflow also passed; JSON/CSV output remained local and unapproved. The current tree and reachable history were reviewed for credentials and private/runtime material. The final tagged SHA and final gate results belong in the GitHub Release body; see [VERIFICATION.md](docs/VERIFICATION.md) and [RELEASE.md](docs/RELEASE.md) for scope and limits.
-
-A prepared GitHub-hosted verifier was attempted twice on 2026-10-11, but GitHub assigned no runner and executed zero steps; no passing hosted-CI result is claimed. Hosted Actions are supplemental only.
-
-Historical live-model smoke evidence from 2026-09-28 covers Ollama with `gemma4:e2b-it-qat` and LM Studio with `gemma-4-e2b-it-qat@q4_0`. Those are smoke tests, not accuracy or speed benchmarks.
 
 ## Installation
 
@@ -139,8 +129,6 @@ The repository includes a deterministic demo that creates a fictional merchant i
 ```bash
 python examples/run_synthetic_demo.py
 ```
-
-This demo is for pipeline reproducibility. It is **not** a model-accuracy benchmark.
 
 The expected high-level result is:
 
@@ -199,11 +187,11 @@ The current required domain fields are `merchant_name` and `document_type`. Opti
 
 Parser input is split into word-bounded chunks. Each field can be attempted across later chunks instead of only the first document chunk. This improves completeness for long documents while retaining per-attempt provenance.
 
-OCR also applies configurable resource ceilings before expensive work: by default **50 MB per input file, 100 PDF pages, and 40 million pixels per image or rendered PDF page**. PDF pages are rendered one at a time, and rendering/OCR calls have timeouts. These are operational safeguards, not a malware sandbox.
+OCR also applies configurable resource ceilings before expensive work: by default **50 MB per input file, 100 PDF pages, and 40 million pixels per image or rendered PDF page**. PDF pages are rendered one at a time, and rendering/OCR calls have timeouts.
 
 ## Human review and CRM safety
 
-Validation produces explicit states such as `ready_for_review`, `needs_review`, and `needs_correction`. Validation never turns extraction into a funding/underwriting decision.
+Validation produces explicit states such as `ready_for_review`, `needs_review`, and `needs_correction`.
 
 The optional enterprise CRM submitter requires all of the following before external transmission:
 
@@ -211,7 +199,7 @@ The optional enterprise CRM submitter requires all of the following before exter
 2. `review_approved` is explicitly `true`;
 3. `review_state` is explicitly `approved`.
 
-Approval is also checked at the public connector entry point. Local output failure blocks enterprise transmission. These flags are an integration contract, not authenticated approval records; embedding applications must own human approval. The desktop and CLI do not expose external CRM submission.
+Approval is also checked at the public connector entry point. Local output failure blocks enterprise transmission. The desktop and CLI do not expose external CRM submission.
 
 SOAP/OAuth dependencies are lazy-loaded only when those optional integrations are configured. The default local pipeline does not require `zeep` or `requests-oauthlib`.
 
@@ -225,7 +213,7 @@ MoneyPulse can keep OCR and model inference on the same machine or private netwo
 
 Do not commit real merchant/applicant documents, credentials, tax identifiers, bank information, generated outputs, logs, or local configuration. See [SECURITY.md](SECURITY.md).
 
-## Development and verification
+## Development
 
 Install development dependencies and run:
 
@@ -236,34 +224,13 @@ python -m pytest -q
 
 The deterministic test suite uses fakes for model-server behavior; it does not require downloading a large model or starting a live inference server. OCR integration tests use generated fictional images and require Tesseract.
 
-The repository-local release verifier is the canonical release gate. It creates a temporary virtual environment, installs the declared desktop/development dependencies, checks dependency consistency, compiles the code, launches the GUI through offscreen smoke tests, runs the test suite, executes the real-Tesseract synthetic workflow, and runs Bandit:
-
-```bash
-python scripts/verify.py --fresh
-```
-
-Linux/macOS users can also run `bash scripts/verify.sh --fresh`; Windows PowerShell users can run `.\scripts\verify.ps1 --fresh`. The non-`--fresh` form uses the currently active Python environment for faster development checks.
-
-A manual GitHub Actions workflow mirrors the Python 3.12/3.13 fresh gate and core-only smoke path. It is supplemental evidence only; until a hosted runner actually executes it successfully, it is not a substitute for the repository-local verifier.
-
-A real-model release smoke test is separate because it requires a running local model server and downloaded weights. With a compatible local model loaded in Ollama or LM Studio, run:
-
-```bash
-python scripts/verify.py --fresh --live-model auto
-```
-
-Use `--live-model ollama` or `--live-model lm_studio` to require a specific backend. Passing Bandit is security-lint evidence only, not a security or compliance certification.
-
-Before tagging or publishing a release, follow the full [release-readiness checklist](docs/RELEASE.md).
+For full release checks, see [VERIFICATION.md](docs/VERIFICATION.md) and [RELEASE.md](docs/RELEASE.md).
 
 ## Current limitations
 
 - Extraction quality varies by OCR quality, document layout, prompts, and chosen model.
-- No fixed extraction-accuracy or speed benchmark is published.
-- A live local-model smoke test is environment-dependent and separate from deterministic tests.
 - External CRM adapters require deployment-specific testing and credentials.
-- PyInstaller configurations are retained, but binary builds should not be treated as verified until built and tested on their target platform.
-- The Windows source workflow is verified within the recorded scope; macOS native execution and packaged binaries require separate target-platform checks.
+- PyInstaller configurations are retained, but binary builds should be tested on their target platform.
 
 ## Documentation
 
@@ -271,7 +238,7 @@ Before tagging or publishing a release, follow the full [release-readiness check
 - [Setup and troubleshooting](docs/SETUP.md)
 - [Release readiness](docs/RELEASE.md)
 - [Verification and audit record](docs/VERIFICATION.md)
-- [Project brief and submission drafts](docs/PROJECT_BRIEF.md)
+- [Project brief](docs/PROJECT_BRIEF.md)
 - [Synthetic examples](examples/README.md)
 - [Contributing](CONTRIBUTING.md)
 - [Security policy](SECURITY.md)
