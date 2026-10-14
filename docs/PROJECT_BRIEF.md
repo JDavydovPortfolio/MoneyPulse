@@ -1,50 +1,103 @@
 # MoneyPulse project brief
 
-## Problem and users
+## Overview
 
-Merchant intake workflows turn sensitive financial documents into structured records. OCR can misread source text, and model extraction can invent or misformat values. MoneyPulse gives developers and operations teams a local-first reference pipeline where model output remains untrusted and human review is explicit.
+MoneyPulse is a local-first AI document-intelligence pipeline for Merchant Cash Advance underwriting and operations. It converts merchant applications and supporting financial documents into structured, validated underwriting data that can be reviewed locally or passed into downstream workflows.
 
-## Reusable value
+The project combines OCR, configurable local LLM inference, source-grounded extraction, deterministic schema/domain validation, underwriting pre-screen signals, desktop/headless workflows, and optional CRM integration.
 
-- A shared model-provider interface for Ollama, LM Studio, llama.cpp-compatible servers, and optional Transformers.
-- Source-grounded extraction that reconciles model-proposed values with their OCR source before propagation, while retaining raw attempts in provenance for review.
-- Versioned extraction schema, deterministic structural/domain validation, and explicit review states.
-- Local/private HTTP model endpoints by default, with deliberate opt-in required before OCR-derived text can be sent to a remote model endpoint.
-- Configurable OCR resource ceilings plus one-page-at-a-time PDF rendering and operation timeouts.
-- Reviewable local JSON and spreadsheet-safe CSV, with external CRM submission gated separately.
-- Real OCR synthetic demos that outsiders can evaluate without private documents or model downloads.
-- Desktop and headless paths with regression tests and a repository-local fresh-environment verifier.
+## Problem
 
-These are implemented components. Extraction accuracy on a representative real-document corpus, packaged desktop installers, deployment-specific CRM integrations, and broad external adoption are not claimed as completed benchmarks, certifications, or usage evidence.
+MCA teams routinely receive merchant information in PDFs, scans, images, applications, and supporting financial documents. Before an underwriter can evaluate a file, that information often has to be read, re-keyed, normalized, and checked manually.
 
-## Demonstration
+MoneyPulse automates that intake layer while keeping the underlying source visible and the rules inspectable.
 
-1. Follow the [quick start](../README.md#try-it-in-a-few-minutes).
-2. Run the synthetic OCR demo and inspect the unapproved local JSON.
-3. Run the fresh verifier to evaluate the GUI, PDF/image OCR, HTTP provider contracts, and failure boundaries.
-4. Start a real local model and run the separate live-model smoke test.
-5. Read [architecture](ARCHITECTURE.md), [verification](VERIFICATION.md), and the [release checklist](RELEASE.md) to distinguish deterministic validation from model factual accuracy and recorded evidence from release requirements.
+## Core workflow
 
-## Maintenance evidence
+```text
+merchant documents
+  -> OCR
+  -> local AI extraction
+  -> source grounding
+  -> schema + domain validation
+  -> underwriting metrics
+  -> optional deterministic pre-screen policy
+  -> analyst / underwriter review
+  -> local JSON / CSV
+  -> optional CRM workflow
+```
 
-Repository history records provider unification, schema/approval boundaries, output-failure handling, compatibility tests, documentation corrections, and local release verification. The September 29 hardening work additionally addresses spreadsheet formula injection, non-boolean CRM approval, direct connector bypass, batch review, persistent configuration, and bounded PDF rendering.
+## Underwriting support
 
-The October hardening adds source-grounded extraction, explicit remote-endpoint opt-in, OCR file/page/pixel ceilings, regression tests for those boundaries, release-readiness documentation, a manual hosted-verification workflow, and dependency-update configuration. The latest October grounding/resource-limit change set has focused regression and compilation evidence; the last complete fresh-environment release gate remains the September 29 record until the current release candidate is rerun through [RELEASE.md](RELEASE.md).
+MoneyPulse calculates structured pre-underwriting signals from validated merchant data, including:
 
-Maintainer responsibility should be supported by these actual changes and ongoing review, triage, dependency maintenance, and releases. No external usage, downloads, stars, or contributors are manufactured or asserted here. Prepared release checks are not represented as published releases.
+- requested funding amount;
+- annual revenue;
+- processing volume;
+- years in business;
+- requested amount relative to annual revenue;
+- requested amount relative to processing volume.
 
-## Codex for Open Source positioning
+Operators can optionally configure deterministic business-policy thresholds for those signals. When policy rules are present, MoneyPulse returns an auditable pre-screen recommendation of `advance`, `manual_review`, or `needs_more_data`, together with each rule's input, threshold, and result.
 
-The [current OpenAI application](https://openai.com/form/codex-for-oss/) asks for a public repository, primary/core maintainer role, and a qualification explanation capped at 500 characters. It considers repository usage, ecosystem importance, and active maintenance, and allows applicants to explain ecosystem value when other signals are less established. Read the live form and terms again immediately before submission.
+The policy engine is deliberately separate from the LLM so underwriting rules are not improvised by model output.
 
-The strongest defensible case is the reusable local-inference and trust-boundary architecture, reproducible evaluation without sensitive data, and substantive maintenance evidence. Software readiness does not establish broad adoption or guarantee selection.
+## Local AI architecture
 
-### Draft qualification text — for maintainer review, not submitted
+MoneyPulse supports interchangeable local-model backends:
 
-> MoneyPulse is a local-first financial-document pipeline with interchangeable model providers, source-grounded extraction, versioned schemas, deterministic validation, and explicit human review. Synthetic OCR demos let others evaluate it without private data. The public history shows substantive provider, security, testing, dependency, and release-maintenance work; recorded fresh-install checks cover the September baseline, with focused regressions for the latest hardening.
+- Ollama;
+- LM Studio;
+- llama.cpp-compatible HTTP servers;
+- optional in-process Hugging Face Transformers.
 
-### Draft API-credit use — for maintainer review, not submitted
+The current local default is Qwen3 8B, with Qwen3 4B as a lower-memory alternative. Provider/model settings are configurable from the desktop application or configuration file.
 
-> API credits would support MoneyPulse maintenance: reviewing code changes, reproducing bugs with synthetic fixtures, expanding malformed-output and approval-boundary tests, analyzing dependency vulnerabilities, and preparing verified releases. Private financial documents would not be used as evaluation fixtures. Credits would support development and maintenance; users can continue running document inference locally.
+## Data-quality controls
 
-Do not add adoption statistics without a verified source. Confirm the applicant's GitHub role, public profile, account email, and any organization ID privately before completing the form. Neither draft authorizes submitting the application or posting public messages.
+Model output is treated as proposed data rather than unquestioned truth. Before a value can propagate through the pipeline, MoneyPulse can:
+
+1. compare the proposed value with OCR source text;
+2. enforce a versioned output schema;
+3. apply deterministic field/domain rules;
+4. record provenance and rejected attempts;
+5. expose flagged issues and review state in the desktop UI.
+
+This architecture is designed to make automated extraction useful in a financial workflow without hiding where values came from.
+
+## Interfaces
+
+### Desktop
+
+The PySide6 desktop application supports document selection, batch processing, OCR inspection, extracted-data review, underwriting signals, validation results, local-model configuration, underwriting-policy configuration, CSV export, and output-folder access.
+
+### Headless
+
+The CLI exposes the same processing pipeline for scripted or server-side use:
+
+```bash
+python -m src.cli doctor
+python -m src.cli process input --output output
+```
+
+## Output
+
+MoneyPulse produces reviewable local artifacts, including structured JSON and CSV summaries. Underwriting pre-screen results are included in the local JSON output. External integrations are optional and separately configurable.
+
+## Privacy model
+
+With a local backend selected, OCR and model inference can remain on the operator's machine or private network. Remote model endpoints require explicit configuration. Real merchant documents, credentials, runtime outputs, and local configuration are intentionally excluded from the repository; demos use synthetic data.
+
+## Technology
+
+Python · PySide6 · Tesseract OCR · pdf2image/Poppler · local LLMs · Ollama · LM Studio · llama.cpp · Hugging Face Transformers · JSON/CSV · REST/SOAP integration adapters · pytest
+
+## Quick evaluation
+
+1. Follow the [README quick start](../README.md#try-it-in-a-few-minutes).
+2. Run `python examples/run_synthetic_demo.py` to exercise OCR and the processing pipeline on generated fictional data.
+3. Launch `python main.py` for the desktop workflow.
+4. Configure Qwen3 through Ollama or LM Studio for live local-model extraction.
+5. Add optional underwriting policy thresholds in the desktop Configuration dialog to exercise deterministic pre-screen rules.
+
+See [Architecture](ARCHITECTURE.md), [Setup](SETUP.md), and [Security](../SECURITY.md) for implementation details.
