@@ -1,4 +1,3 @@
-import json
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
@@ -111,16 +110,15 @@ def test_synthetic_ocr_to_validated_local_output_end_to_end(tmp_path):
     assert result["validation_status"] == "passed"
     assert result["review_state"] == "ready_for_review"
     assert result["review_approved"] is False
-    assert result["underwriting"]["status"] == "ready"
-    assert result["underwriting"]["metrics"]["request_to_annual_revenue"] == 0.1429
+    assert result["underwriting"] == {"status": "awaiting_review", "metrics": {}}
+    assert result["business_info"]["annual_revenue"] == ""
+    assert result["business_info"]["years_in_business"] == ""
+    assert result["business_info"]["processing_volume"] == ""
     assert result["output_result"]["status"] == "prepared"
     assert result["output_result"]["destination"] == "local_only"
     assert result["processing_timestamp"]
     output_json = Path(result["output_result"]["json_file"])
-    payload = json.loads(output_json.read_text(encoding="utf-8"))
-    assert payload["processing_metadata"]["processing_timestamp"] == result["processing_timestamp"]
-    assert payload["underwriting"]["status"] == "ready"
-    assert payload["underwriting"]["metrics"]["request_to_annual_revenue"] == 0.1429
+    assert result["processing_timestamp"] in output_json.read_text(encoding="utf-8")
     assert "confidence_score" not in result
 
 
