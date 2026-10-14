@@ -1,6 +1,10 @@
 # MoneyPulse
 
-MoneyPulse is a local-first financial-document processing pipeline for Merchant Cash Advance (MCA) and related operational workflows. It combines OCR, configurable local model extraction, deterministic source/schema/domain validation, reviewable local output, and optional CRM adapters.
+**Local-first AI document intelligence for Merchant Cash Advance underwriting and operations.**
+
+MoneyPulse turns merchant applications and supporting financial documents into structured, reviewable underwriting data. The pipeline combines OCR, configurable local-model extraction, source-grounding, deterministic validation, configurable underwriting pre-screen rules, local JSON/CSV output, and optional CRM adapters.
+
+**OCR → local AI extraction → source grounding → validation → underwriting pre-screen → human review → CRM-ready output**
 
 **[Setup and troubleshooting](docs/SETUP.md)** · **[Architecture](docs/ARCHITECTURE.md)** · **[Project brief](docs/PROJECT_BRIEF.md)** · **[Contributing](CONTRIBUTING.md)**
 
@@ -8,9 +12,20 @@ MoneyPulse is a local-first financial-document processing pipeline for Merchant 
 
 Actual desktop screenshot after real Tesseract OCR with the deterministic synthetic fixture provider.
 
+## What MoneyPulse does
+
+- Extracts merchant, contact, business, funding, and document data from PDFs and images.
+- Uses local AI providers through Ollama, LM Studio, llama.cpp-compatible servers, or optional Transformers.
+- Reconciles model-proposed values with OCR source text before accepting them.
+- Applies deterministic schema and domain validation.
+- Calculates underwriting metrics such as requested amount relative to annual revenue and processing volume.
+- Supports configurable underwriting pre-screen rules for years in business, revenue, processing volume, and funding-request ratios.
+- Produces structured local results for analyst/underwriter review and downstream CRM workflows.
+- Keeps OCR and inference local when a local model backend is selected.
+
 ## Try it in a few minutes
 
-Use Python **3.12 or 3.13**, with Tesseract and Poppler installed ([platform instructions](docs/SETUP.md)). No model download is needed for this demo:
+Use Python **3.12 or 3.13**, with Tesseract and Poppler installed ([platform instructions](docs/SETUP.md)). No model download is needed for the deterministic demo:
 
 ```bash
 git clone https://github.com/JDavydovPortfolio/MoneyPulse.git
@@ -26,17 +41,15 @@ python -m pip install -r requirements-core.txt -c constraints-tested.txt
 python examples/run_synthetic_demo.py
 ```
 
-The demo creates a fictional document, runs real OCR, validates fixture output, and saves local JSON under `output/synthetic_demo/`. Look for `completed`, `passed`, and `ready_for_review`.
+The demo creates a fictional document, runs real OCR, validates fixture output, calculates underwriting signals, and saves local output under `output/synthetic_demo/`.
 
 For the desktop application, install `requirements.txt` with the same constraints, start Ollama or LM Studio with your model, and run `python main.py`.
 
 ## Why it exists
 
-Financial documents often contain sensitive data, while extraction models can return incomplete, malformed, or plausible-looking unsupported output. MoneyPulse is designed around three practical goals:
+MCA underwriting starts with messy merchant data: applications, statements, identity/contact details, funding requests, revenue figures, processing volume, and other supporting documents. Manually re-keying and validating that material slows underwriting and introduces avoidable errors.
 
-- let OCR and model inference run locally when a local backend is chosen;
-- require model-proposed values to reconcile with the OCR source before they propagate; and
-- keep accepted output behind deterministic validation and explicit review boundaries before downstream use.
+MoneyPulse automates the document-intake and pre-underwriting layer so an analyst can move from raw documents to structured, validated business data and deterministic underwriting signals in one workflow.
 
 ## Processing flow
 
@@ -47,12 +60,34 @@ document
   -> source-grounded structured extraction
   -> deterministic structural validation
   -> deterministic domain validation
-  -> human-review state
+  -> underwriting metrics + configurable pre-screen rules
+  -> review state
   -> local JSON/CSV output
-  -> optional external CRM only after explicit approval
+  -> optional external CRM after approval
 ```
 
-The default pipeline prepares local artifacts. It does not automatically transmit processed documents to an external CRM.
+## Underwriting pre-screening
+
+MoneyPulse now includes a deterministic underwriting pre-screen engine in `src/underwriting.py`. It is intentionally separate from the LLM: identical validated inputs and policy settings produce identical results.
+
+The engine always calculates available business metrics, including:
+
+- requested funding amount;
+- annual revenue;
+- processing volume;
+- years in business;
+- requested amount ÷ annual revenue;
+- requested amount ÷ processing volume.
+
+An operator can also provide an `underwriting_policy` in MoneyPulse configuration. Supported thresholds include:
+
+- `min_years_in_business`;
+- `min_annual_revenue`;
+- `min_processing_volume`;
+- `max_request_to_annual_revenue`;
+- `max_request_to_processing_volume`.
+
+When policy rules are configured, the engine produces a deterministic pre-screen result of `advance`, `manual_review`, or `needs_more_data`, together with every rule result, actual value, and threshold. If no policy is configured, MoneyPulse still calculates the underwriting signals without inventing approval criteria.
 
 ## Supported model providers
 
@@ -67,7 +102,7 @@ HTTP model endpoints are restricted to explicit loopback/private/link-local addr
 
 ### Recommended local AI setup
 
-MoneyPulse defaults to **Qwen3 8B** for local extraction. It is available through Ollama as a roughly 5.2 GB Q4_K_M model and is a practical fit for consumer GPUs while providing substantially more capability than the previous ultra-small default. For lower-memory systems, **Qwen3 4B** is the fallback. Tesseract performs OCR; the local model maps OCR text into MoneyPulse's structured schema.
+MoneyPulse defaults to **Qwen3 8B** for local extraction. For lower-memory systems, **Qwen3 4B** is the lighter fallback. Tesseract performs OCR; the local model maps OCR text into MoneyPulse's structured schema.
 
 - **Ollama:** run `ollama pull qwen3:8b`, start Ollama, and keep the default endpoint `http://localhost:11434`.
 - **LM Studio:** download a Qwen3 8B GGUF, start LM Studio's local API server, and use `http://localhost:1234`. MoneyPulse uses the model identifier exposed by LM Studio.
@@ -120,7 +155,7 @@ For in-process Transformers:
 python -m pip install -r requirements-transformers.txt
 ```
 
-A network connection may be needed to install packages or model weights. Local-first does not mean every installation or configuration is offline.
+A network connection may be needed to install packages or model weights. Local-first refers to document processing and inference when local providers are selected; installation downloads can still require network access.
 
 ## Reproducible synthetic demo
 
@@ -130,12 +165,13 @@ The repository includes a deterministic demo that creates a fictional merchant i
 python examples/run_synthetic_demo.py
 ```
 
-The expected high-level result is:
+The expected high-level result includes:
 
 ```text
 processing_status: completed
 validation_status: passed
 review_state: ready_for_review
+underwriting: structured pre-screen signals
 output destination: local_only
 ```
 
@@ -166,7 +202,7 @@ The CLI uses the same saved configuration and pipeline. It performs component ch
 
 ## Trust boundary and schema
 
-Model output is treated as untrusted. Before a proposed field value is propagated, the extraction layer reconciles it with the OCR source chunk that produced it. Equivalent formatting for amounts and contact identifiers is normalized for comparison; unsupported guesses are discarded while raw attempts remain available in provenance. This grounding layer reduces hallucination propagation but does not prove OCR correctness or document authenticity.
+Model output is treated as untrusted. Before a proposed field value is propagated, the extraction layer reconciles it with the OCR source chunk that produced it. Equivalent formatting for amounts and contact identifiers is normalized for comparison; unsupported guesses are discarded while raw attempts remain available in provenance.
 
 `src/schema.py` then enforces a versioned extraction shape before domain validation can proceed. Unexpected root fields, missing schema fields, wrong nested types, malformed provenance, and unsupported schema versions fail closed.
 
@@ -189,17 +225,11 @@ Parser input is split into word-bounded chunks. Each field can be attempted acro
 
 OCR also applies configurable resource ceilings before expensive work: by default **50 MB per input file, 100 PDF pages, and 40 million pixels per image or rendered PDF page**. PDF pages are rendered one at a time, and rendering/OCR calls have timeouts.
 
-## Human review and CRM safety
+## Review and CRM workflow
 
-Validation produces explicit states such as `ready_for_review`, `needs_review`, and `needs_correction`.
+Validation produces explicit states such as `ready_for_review`, `needs_review`, and `needs_correction`. Underwriting pre-screen results sit alongside those states so analysts can see the extracted facts, validation outcome, calculated metrics, and policy-rule results together.
 
-The optional enterprise CRM submitter requires all of the following before external transmission:
-
-1. deterministic validation status is `passed`;
-2. `review_approved` is explicitly `true`;
-3. `review_state` is explicitly `approved`.
-
-Approval is also checked at the public connector entry point. Local output failure blocks enterprise transmission. The desktop and CLI do not expose external CRM submission.
+The optional enterprise CRM submitter can be configured to require explicit analyst approval before external transmission. Local output remains the default workflow.
 
 SOAP/OAuth dependencies are lazy-loaded only when those optional integrations are configured. The default local pipeline does not require `zeep` or `requests-oauthlib`.
 
@@ -209,7 +239,7 @@ MoneyPulse can keep OCR and model inference on the same machine or private netwo
 
 - Python packages or model weights are downloaded;
 - an operator explicitly opts into a remote model endpoint with `allow_remote_llm: true`;
-- an optional external CRM integration is explicitly enabled and approved.
+- an optional external CRM integration is explicitly enabled.
 
 Do not commit real merchant/applicant documents, credentials, tax identifiers, bank information, generated outputs, logs, or local configuration. See [SECURITY.md](SECURITY.md).
 
@@ -227,6 +257,7 @@ The deterministic test suite uses fakes for model-server behavior; it does not r
 ## Current limitations
 
 - Extraction quality varies by OCR quality, document layout, prompts, and chosen model.
+- Underwriting policy thresholds are deployment-specific and must be supplied by the operator when rule-based pre-screen decisions are desired.
 - External CRM adapters require deployment-specific testing and credentials.
 - PyInstaller configurations are retained, but binary builds should be tested on their target platform.
 
