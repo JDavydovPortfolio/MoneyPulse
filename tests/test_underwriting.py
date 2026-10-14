@@ -1,4 +1,4 @@
-from src.underwriting import UnderwritingPrecheck
+from src.underwriting import UnderwritingMetrics
 
 
 def document(**overrides):
@@ -9,55 +9,39 @@ def document(**overrides):
             "processing_volume": "$48,000",
             "years_in_business": "4",
         },
+        "review_approved": False,
+        "review_state": "ready_for_review",
     }
     base.update(overrides)
     return base
 
 
-def test_signals_only_computes_underwriting_metrics():
-    result = UnderwritingPrecheck().evaluate(document())
+def test_metrics_are_not_calculated_before_human_approval():
+    result = UnderwritingMetrics().evaluate(document())
 
-    assert result["mode"] == "signals_only"
-    assert result["status"] == "ready"
-    assert result["preliminary_recommendation"] == "not_configured"
-    assert result["metrics"]["requested_amount"] == 75000.0
-    assert result["metrics"]["annual_revenue"] == 525000.0
+    assert result == {"status": "awaiting_review", "metrics": {}}
+
+
+def test_reviewed_explicit_values_can_feed_deterministic_ratios():
+    result = UnderwritingMetrics().evaluate(
+        document(review_approved=True, review_state="approved")
+    )
+
+    assert result["status"] == "calculated"
+    assert result["inputs"]["requested_amount"] == 75000.0
+    assert result["inputs"]["annual_revenue"] == 525000.0
+    assert result["inputs"]["processing_volume"] == 48000.0
+    assert result["inputs"]["years_in_business"] == 4.0
     assert result["metrics"]["request_to_annual_revenue"] == 0.1429
     assert result["metrics"]["request_to_processing_volume"] == 1.5625
 
 
-def test_policy_can_advance_when_all_configured_rules_pass():
-    policy = {
-        "min_years_in_business": 2,
-        "min_annual_revenue": 300000,
-        "min_processing_volume": 30000,
-        "max_request_to_annual_revenue": 0.20,
-        "max_request_to_processing_volume": 2.0,
-    }
-
-    result = UnderwritingPrecheck(policy).evaluate(document())
-
-    assert result["mode"] == "policy"
-    assert result["preliminary_recommendation"] == "advance"
-    assert all(rule["result"] == "pass" for rule in result["rules"])
-
-
-def test_policy_routes_failed_rule_to_manual_review():
-    policy = {"max_request_to_annual_revenue": 0.10}
-
-    result = UnderwritingPrecheck(policy).evaluate(document())
-
-    assert result["preliminary_recommendation"] == "manual_review"
-    assert result["rules"][0]["result"] == "fail"
-
-
-def test_policy_reports_missing_data_instead_of_guessing():
-    policy = {"min_annual_revenue": 300000}
-    data = document()
+def test_missing_reviewed_values_are_not_inferred():
+    data = document(review_approved=True, review_state="approved")
     data["business_info"]["annual_revenue"] = ""
 
-    result = UnderwritingPrecheck(policy).evaluate(data)
+    result = UnderwritingMetrics().evaluate(data)
 
-    assert result["status"] == "partial"
-    assert result["preliminary_recommendation"] == "needs_more_data"
-    assert result["rules"][0]["result"] == "missing_data"
+    assert result["status"] == "calculated"
+    assert result["inputs"]["annual_revenue"] is None
+    assert result["metrics"]["request_to_annual_revenue"] is None
