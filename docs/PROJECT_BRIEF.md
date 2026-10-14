@@ -21,9 +21,8 @@ merchant documents
   -> source grounding
   -> schema + domain validation
   -> analyst / underwriter review
-  -> deterministic derived calculations on approved values
-  -> local JSON / CSV
-  -> optional downstream CRM workflow
+  -> local structured output
+  -> deterministic underwriting calculations/rules in the approved downstream workflow
 ```
 
 ## Extraction boundary
@@ -34,16 +33,11 @@ A proposed value is accepted only when MoneyPulse can reconcile it with the OCR 
 
 Source grounding establishes that a value is supported by OCR text; it does not establish that OCR is perfect or that a merchant-reported figure is economically correct. Human review remains necessary before those values are relied on for underwriting.
 
-## Derived calculations
+## Underwriting handoff
 
-`src/underwriting.py` performs only review-gated arithmetic. It does not generate approval/decline recommendations and does not infer missing financial inputs.
+MoneyPulse currently prepares source-backed, validated data for underwriting review and downstream use. It does not currently implement a generic approval/decline engine or invent lender policy thresholds.
 
-Derived ratios are calculated only after explicit human approval of the structured record. Current calculations include:
-
-- requested amount relative to annual revenue;
-- requested amount relative to processing volume.
-
-If an approved input is missing, the related derived metric remains missing.
+After an analyst or underwriter has reviewed the extracted values against the source, lender- or ISO-specific deterministic calculations and rules can operate on those approved values in the downstream workflow. Raw statements would require dedicated statement-analysis logic before derived revenue or processing metrics could be treated as reliable inputs.
 
 ## Local AI architecture
 
