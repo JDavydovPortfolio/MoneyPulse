@@ -14,7 +14,6 @@ from .ocr import (
     OCRProcessor,
     SUPPORTED_EXTENSIONS,
 )
-from .underwriting import UnderwritingMetrics
 from .validator import DocumentValidator
 
 
@@ -27,7 +26,6 @@ class DocumentPipeline:
         self.ocr = self._build_ocr()
         self.llm = self._build_llm()
         self.validator = DocumentValidator()
-        self.underwriting = UnderwritingMetrics()
         self.crm = CRMSubmitter(output_dir)
         self.logger = logging.Logger(__name__)
         self._setup_logging()
@@ -110,9 +108,6 @@ class DocumentPipeline:
 
             parsed_data = self.llm.parse_document(extracted_text, filename)
             validated_data = self.validator.validate_document(parsed_data)
-            # Derived underwriting arithmetic is review-gated. Freshly extracted
-            # documents are never treated as approved inputs by the processing pipeline.
-            validated_data["underwriting"] = self.underwriting.evaluate(validated_data)
 
             completed_at = datetime.now(timezone.utc)
             validated_data["processing_timestamp"] = completed_at.isoformat()
@@ -177,7 +172,8 @@ class DocumentPipeline:
             }
         except Exception as exc:
             results["output_directory"] = {
-                "status": "error", "details": f"Output directory error: {exc}"
+                "status": "error",
+                "details": f"Output directory error: {exc}",
             }
         return results
 
