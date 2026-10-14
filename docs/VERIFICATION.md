@@ -17,11 +17,11 @@ Current behavior includes:
 - Qwen3 8B as the default local extraction model;
 - source-grounded field extraction that rejects proposed values not supported by OCR text;
 - explicit review state before extracted financial fields are relied on downstream;
-- review-gated deterministic derived ratios in `src/underwriting.py`;
-- no autonomous approval/decline recommendation;
-- no inference of missing annual revenue, processing volume, years in business, or similar merchant financial facts.
+- no generic underwriting policy engine or autonomous approval/decline recommendation;
+- no inference of missing annual revenue, processing volume, years in business, or similar merchant financial facts;
+- reviewable local output for downstream underwriting calculations and lender/ISO-specific policy rules.
 
-The later changes on `main` have not been rerun through the historical v1.0.0 Windows verification environment from this chat. Historical smoke results should not be presented as evidence for unrerun current changes. The current tests document the intended behavior, including rejection of unsupported source values and the review gate for derived arithmetic.
+The later changes on `main` have not been rerun through the historical v1.0.0 Windows verification environment from this chat. Historical smoke results should not be presented as evidence for unrerun current changes. The current tests document the intended source-grounding and validation behavior.
 
 ## Meaning of this record
 
