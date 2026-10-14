@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 import tempfile
@@ -15,7 +14,7 @@ from .ocr import (
     OCRProcessor,
     SUPPORTED_EXTENSIONS,
 )
-from .underwriting import UnderwritingPrecheck
+from .underwriting import UnderwritingMetrics
 from .validator import DocumentValidator
 
 
@@ -28,7 +27,7 @@ class DocumentPipeline:
         self.ocr = self._build_ocr()
         self.llm = self._build_llm()
         self.validator = DocumentValidator()
-        self.underwriting = UnderwritingPrecheck(self.config.get("underwriting_policy"))
+        self.underwriting = UnderwritingMetrics()
         self.crm = CRMSubmitter(output_dir)
         self.logger = logging.Logger(__name__)
         self._setup_logging()
@@ -92,20 +91,6 @@ class DocumentPipeline:
             self.logger.error("Failed to generate CSV summary: %s", exc)
         return processed_documents
 
-    @staticmethod
-    def _persist_underwriting_result(output_result: Dict, underwriting: Dict) -> None:
-        """Add the deterministic underwriting section to the local JSON artifact."""
-        json_path = output_result.get("json_file")
-        if not json_path:
-            return
-        with open(json_path, "r", encoding="utf-8") as handle:
-            payload = json.load(handle)
-        payload["underwriting"] = underwriting
-        temp_path = f"{json_path}.tmp"
-        with open(temp_path, "w", encoding="utf-8") as handle:
-            json.dump(payload, handle, indent=2, ensure_ascii=False)
-        os.replace(temp_path, json_path)
-
     def process_single_document(self, file_path: str) -> Dict:
         filename = os.path.basename(file_path)
         start_time = datetime.now(timezone.utc)
@@ -125,6 +110,8 @@ class DocumentPipeline:
 
             parsed_data = self.llm.parse_document(extracted_text, filename)
             validated_data = self.validator.validate_document(parsed_data)
+            # Derived underwriting arithmetic is review-gated. Freshly extracted
+            # documents are never treated as approved inputs by the processing pipeline.
             validated_data["underwriting"] = self.underwriting.evaluate(validated_data)
 
             completed_at = datetime.now(timezone.utc)
@@ -132,10 +119,6 @@ class DocumentPipeline:
             output_result = self.crm.submit_document(validated_data)
             if output_result.get("status") == "failed":
                 raise RuntimeError(output_result.get("error", "Local output preparation failed"))
-            self._persist_underwriting_result(
-                output_result,
-                validated_data["underwriting"],
-            )
 
             return {
                 **validated_data,
@@ -251,7 +234,6 @@ class DocumentPipeline:
         candidate = {**self.config, **new_config}
         ocr = self.ocr
         llm = self.llm
-        underwriting = self.underwriting
         if {
             "llm_provider",
             "llm_host",
@@ -267,9 +249,6 @@ class DocumentPipeline:
             "ocr_max_image_pixels",
         }.intersection(new_config):
             ocr = self._build_ocr(candidate)
-        if "underwriting_policy" in new_config:
-            underwriting = UnderwritingPrecheck(candidate.get("underwriting_policy"))
         self.config = candidate
         self.ocr = ocr
         self.llm = llm
-        self.underwriting = underwriting
