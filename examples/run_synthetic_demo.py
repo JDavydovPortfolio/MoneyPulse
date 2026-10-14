@@ -35,7 +35,7 @@ DEMO_VALUES = {
 
 
 class DeterministicDemoProvider(LLMProvider):
-    """Fixture provider for verifying the pipeline without a live model server."""
+    """Fixture provider for verifying source grounding without a live model server."""
 
     def __init__(self):
         super().__init__("synthetic-fixture")
@@ -113,11 +113,16 @@ def main() -> int:
     )
 
     result = pipeline.process_single_document(str(input_path))
+    business = result.get("business_info", {}) or {}
     passed = (
         result.get("processing_status") == "completed"
         and result.get("validation_status") == "passed"
         and "example harbor coffee" in result.get("extracted_text", "").lower()
         and result.get("review_approved") is False
+        and result.get("underwriting") == {"status": "awaiting_review", "metrics": {}}
+        and business.get("annual_revenue") == "$525000"
+        and business.get("years_in_business") == ""
+        and business.get("processing_volume") == ""
         and result.get("output_result", {}).get("destination") == "local_only"
     )
     summary = {
@@ -125,6 +130,10 @@ def main() -> int:
         "validation_status": result.get("validation_status"),
         "review_state": result.get("review_state"),
         "merchant_name": result.get("merchant_name"),
+        "annual_revenue": business.get("annual_revenue"),
+        "years_in_business": business.get("years_in_business"),
+        "processing_volume": business.get("processing_volume"),
+        "derived_metrics": result.get("underwriting"),
         "source_file": result.get("source_file"),
         "output_result": result.get("output_result"),
     }
