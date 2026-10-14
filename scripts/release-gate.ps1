@@ -95,11 +95,11 @@ try {
     }
 
     Write-Host "`nAUTOMATED GATES PASSED for $Commit" -ForegroundColor Green
-    Write-Host "Before tagging/releasing, still complete the manual gates in docs/RELEASE.md:" -ForegroundColor Yellow
+    Write-Host "Before tagging/releasing, complete the remaining manual checks:" -ForegroundColor Yellow
     Write-Host "  1. Native desktop launch + fictional-document workflow on the target OS."
     Write-Host "  2. Current-tree and newly reachable git-history privacy/secret audit."
-    Write-Host "  3. Documentation/release-note review against actual behavior."
-    Write-Host "A passing automated gate is evidence, not permission to skip those checks."
+    Write-Host "  3. Documentation and release-description review against actual behavior."
+    Write-Host "See docs/VERIFICATION.md for recorded verification history."
 }
 catch {
     Write-Host "`nRELEASE GATE FAILED: $($_.Exception.Message)" -ForegroundColor Red
