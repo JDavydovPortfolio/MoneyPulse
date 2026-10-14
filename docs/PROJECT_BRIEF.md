@@ -22,22 +22,14 @@ merchant documents
   -> schema + domain validation
   -> analyst / underwriter review
   -> local structured output
-  -> deterministic underwriting calculations/rules in the approved downstream workflow
+  -> optional downstream CRM / underwriting workflow
 ```
 
 ## Extraction boundary
 
-The local model is used to map OCR text into structured fields. It is not used as an independent source of financial facts.
+The local model maps OCR text into structured fields. MoneyPulse accepts a proposed value only when it can reconcile that value with the OCR source.
 
-A proposed value is accepted only when MoneyPulse can reconcile it with the OCR source. If annual revenue, processing volume, years in business, requested funding, or another optional field is not supported by source text, the value remains missing rather than being guessed.
-
-Source grounding establishes that a value is supported by OCR text; it does not establish that OCR is perfect or that a merchant-reported figure is economically correct. Human review remains necessary before those values are relied on for underwriting.
-
-## Underwriting handoff
-
-MoneyPulse currently prepares source-backed, validated data for underwriting review and downstream use. It does not currently implement a generic approval/decline engine or invent lender policy thresholds.
-
-After an analyst or underwriter has reviewed the extracted values against the source, lender- or ISO-specific deterministic calculations and rules can operate on those approved values in the downstream workflow. Raw statements would require dedicated statement-analysis logic before derived revenue or processing metrics could be treated as reliable inputs.
+Annual revenue, processing volume, years in business, requested funding, contact information, and other fields therefore remain tied to what appears in the source document. Unsupported values are discarded instead of being synthesized.
 
 ## Local AI architecture
 
@@ -52,7 +44,7 @@ The current local default is Qwen3 8B, with Qwen3 4B as a lower-memory alternati
 
 ## Data-quality controls
 
-Model output is treated as proposed data rather than unquestioned truth. Before a value can propagate through the pipeline, MoneyPulse can:
+Before a model-proposed value can propagate through the pipeline, MoneyPulse can:
 
 1. compare the proposed value with OCR source text;
 2. enforce a versioned output schema;
