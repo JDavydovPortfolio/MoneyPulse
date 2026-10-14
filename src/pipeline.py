@@ -14,6 +14,7 @@ from .ocr import (
     OCRProcessor,
     SUPPORTED_EXTENSIONS,
 )
+from .underwriting import UnderwritingPrecheck
 from .validator import DocumentValidator
 
 
@@ -26,6 +27,7 @@ class DocumentPipeline:
         self.ocr = self._build_ocr()
         self.llm = self._build_llm()
         self.validator = DocumentValidator()
+        self.underwriting = UnderwritingPrecheck(self.config.get("underwriting_policy"))
         self.crm = CRMSubmitter(output_dir)
         self.logger = logging.Logger(__name__)
         self._setup_logging()
@@ -108,6 +110,7 @@ class DocumentPipeline:
 
             parsed_data = self.llm.parse_document(extracted_text, filename)
             validated_data = self.validator.validate_document(parsed_data)
+            validated_data["underwriting"] = self.underwriting.evaluate(validated_data)
 
             completed_at = datetime.now(timezone.utc)
             validated_data["processing_timestamp"] = completed_at.isoformat()
@@ -172,8 +175,7 @@ class DocumentPipeline:
             }
         except Exception as exc:
             results["output_directory"] = {
-                "status": "error",
-                "details": f"Output directory error: {exc}",
+                "status": "error", "details": f"Output directory error: {exc}"
             }
         return results
 
@@ -230,6 +232,7 @@ class DocumentPipeline:
         candidate = {**self.config, **new_config}
         ocr = self.ocr
         llm = self.llm
+        underwriting = self.underwriting
         if {
             "llm_provider",
             "llm_host",
@@ -245,6 +248,9 @@ class DocumentPipeline:
             "ocr_max_image_pixels",
         }.intersection(new_config):
             ocr = self._build_ocr(candidate)
+        if "underwriting_policy" in new_config:
+            underwriting = UnderwritingPrecheck(candidate.get("underwriting_policy"))
         self.config = candidate
         self.ocr = ocr
         self.llm = llm
+        self.underwriting = underwriting
