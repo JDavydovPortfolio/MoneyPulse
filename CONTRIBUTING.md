@@ -33,8 +33,9 @@ Dependency updates should deliberately update the tested constraints, pass `pip 
 - Never commit real merchant/applicant documents, credentials, tax IDs, bank data, generated outputs, or logs.
 - Use synthetic/redacted fixtures only.
 - Treat model output as untrusted and preserve source grounding, structural validation, domain validation, and provenance.
-- Keep underwriting policy logic deterministic and separate from LLM-generated text. New underwriting rules must expose their inputs, thresholds, and rule outcomes.
-- Do not silently invent underwriting thresholds when policy configuration is absent.
+- Keep the generic MoneyPulse pipeline focused on document intake, source-backed field extraction, validation, review, and downstream data preparation.
+- Do not infer missing merchant financial facts or add autonomous approval/decline recommendations to the extraction pipeline.
+- If a deployment adds lender/ISO-specific underwriting rules downstream, keep them separate from LLM-generated text, deterministic, auditable, and based only on reviewed source-backed inputs.
 - Keep external CRM/network behavior explicit and configurable.
 - Keep remote model/network behavior explicit. A change that permits OCR-derived text to leave the local/private environment must remain opt-in and documented.
 - Do not add fixed speed, accuracy, privacy, compliance, adoption, or security claims without reproducible evidence.
