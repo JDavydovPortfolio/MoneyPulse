@@ -1,8 +1,8 @@
-"""Deterministic underwriting pre-screen signals for MoneyPulse.
+"""Review-gated deterministic calculations for MoneyPulse.
 
-This module evaluates configurable business-policy thresholds against validated
-merchant/application data. It is intentionally separate from the LLM so the
-same extracted inputs produce the same rule result.
+This module never infers merchant financial facts and never makes an underwriting
+approval decision. It only derives arithmetic metrics from values that already
+exist in the structured document after explicit human approval.
 """
 
 from __future__ import annotations
@@ -12,11 +12,8 @@ from decimal import Decimal, InvalidOperation
 from typing import Dict, Optional
 
 
-class UnderwritingPrecheck:
-    """Calculate underwriting metrics and optional configurable rule outcomes."""
-
-    def __init__(self, policy: Optional[Dict] = None):
-        self.policy = dict(policy or {})
+class UnderwritingMetrics:
+    """Calculate derived ratios only from explicitly reviewed document values."""
 
     @staticmethod
     def _decimal(value) -> Optional[Decimal]:
@@ -41,114 +38,37 @@ class UnderwritingPrecheck:
         return float((numerator / denominator).quantize(Decimal("0.0001")))
 
     def evaluate(self, document: Dict) -> Dict:
-        """Return deterministic metrics and an optional policy pre-screen result.
+        """Return review-gated arithmetic derived from explicit source fields.
 
-        Supported policy keys:
-        - min_years_in_business
-        - min_annual_revenue
-        - min_processing_volume
-        - max_request_to_annual_revenue
-        - max_request_to_processing_volume
+        Financial values such as annual revenue, processing volume, years in
+        business, and requested amount must already be present in the reviewed
+        structured document. Missing values are never estimated or invented.
         """
+        if document.get("review_approved") is not True or document.get("review_state") != "approved":
+            return {
+                "status": "awaiting_review",
+                "metrics": {},
+            }
+
         business = document.get("business_info", {}) or {}
         requested_amount = self._decimal(document.get("requested_amount"))
         annual_revenue = self._decimal(business.get("annual_revenue"))
         processing_volume = self._decimal(business.get("processing_volume"))
         years_in_business = self._decimal(business.get("years_in_business"))
 
-        metrics = {
+        inputs = {
             "requested_amount": float(requested_amount) if requested_amount is not None else None,
             "annual_revenue": float(annual_revenue) if annual_revenue is not None else None,
             "processing_volume": float(processing_volume) if processing_volume is not None else None,
             "years_in_business": float(years_in_business) if years_in_business is not None else None,
+        }
+        metrics = {
             "request_to_annual_revenue": self._ratio(requested_amount, annual_revenue),
             "request_to_processing_volume": self._ratio(requested_amount, processing_volume),
         }
 
-        available_signals = sum(value is not None for value in (
-            requested_amount,
-            annual_revenue,
-            processing_volume,
-            years_in_business,
-        ))
-
-        result = {
-            "mode": "policy" if self.policy else "signals_only",
-            "status": "ready" if available_signals == 4 else "partial",
+        return {
+            "status": "calculated",
+            "inputs": inputs,
             "metrics": metrics,
-            "rules": [],
-            "preliminary_recommendation": "not_configured",
         }
-
-        if not self.policy:
-            return result
-
-        rules = []
-
-        def add_rule(name: str, actual, operator: str, threshold):
-            if threshold is None:
-                return
-            threshold_decimal = self._decimal(threshold)
-            if threshold_decimal is None:
-                raise ValueError(f"Invalid underwriting policy threshold for {name}: {threshold!r}")
-            if actual is None:
-                rules.append({
-                    "rule": name,
-                    "result": "missing_data",
-                    "actual": None,
-                    "threshold": float(threshold_decimal),
-                })
-                return
-            if operator == "min":
-                passed = Decimal(str(actual)) >= threshold_decimal
-            else:
-                passed = Decimal(str(actual)) <= threshold_decimal
-            rules.append({
-                "rule": name,
-                "result": "pass" if passed else "fail",
-                "actual": float(actual),
-                "threshold": float(threshold_decimal),
-            })
-
-        add_rule(
-            "minimum_years_in_business",
-            years_in_business,
-            "min",
-            self.policy.get("min_years_in_business"),
-        )
-        add_rule(
-            "minimum_annual_revenue",
-            annual_revenue,
-            "min",
-            self.policy.get("min_annual_revenue"),
-        )
-        add_rule(
-            "minimum_processing_volume",
-            processing_volume,
-            "min",
-            self.policy.get("min_processing_volume"),
-        )
-        add_rule(
-            "maximum_request_to_annual_revenue",
-            metrics["request_to_annual_revenue"],
-            "max",
-            self.policy.get("max_request_to_annual_revenue"),
-        )
-        add_rule(
-            "maximum_request_to_processing_volume",
-            metrics["request_to_processing_volume"],
-            "max",
-            self.policy.get("max_request_to_processing_volume"),
-        )
-
-        result["rules"] = rules
-        if not rules:
-            result["preliminary_recommendation"] = "not_configured"
-        elif any(rule["result"] == "missing_data" for rule in rules):
-            result["preliminary_recommendation"] = "needs_more_data"
-        elif any(rule["result"] == "fail" for rule in rules):
-            result["preliminary_recommendation"] = "manual_review"
-        else:
-            result["preliminary_recommendation"] = "advance"
-
-        return result
