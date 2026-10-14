@@ -120,7 +120,7 @@ def main() -> int:
         "--live-model",
         choices=("auto", "ollama", "lm_studio"),
         default=None,
-        help="Also run the real Gemma 4 OCR-to-validation smoke test against a local provider.",
+        help="Also run the live OCR-to-validation smoke test against a configured local model provider.",
     )
     args = parser.parse_args()
 
