@@ -20,10 +20,7 @@ flowchart TD
     H --> I[Analyst / underwriter review against source evidence]
     I --> J[Local reviewable JSON / CSV]
     J --> K[Optional downstream CRM / underwriting workflow]
-    K --> L[Deterministic calculations and policy rules on reviewed data]
 ```
-
-MoneyPulse currently implements the path through reviewable structured output and optional integration. Lender- or ISO-specific underwriting calculations and approval rules belong after review, using approved values and real policy criteria rather than model inference.
 
 ## Components
 
@@ -37,7 +34,7 @@ Defines the model-provider interface. Local HTTP providers use explicit request 
 
 ### `src/llm.py`
 
-Splits source text into word-bounded chunks and attempts each expected field across chunks. The model is used as a field-mapping aid, not as an independent source of financial facts.
+Splits source text into word-bounded chunks and attempts each expected field across chunks. The model is used as a field-mapping aid.
 
 A model-proposed value must reconcile with the OCR chunk that produced it before propagation. Unsupported guesses are discarded, and raw attempts remain in provenance. If a financial value such as annual revenue, processing volume, years in business, or requested amount is not supported by OCR source text, MoneyPulse leaves it missing rather than inferring it.
 
@@ -51,33 +48,27 @@ Defines extraction schema version `1.0` and validates exact expected fields, nes
 
 Runs structural validation first, followed by deterministic domain checks for fields such as EIN/SSN, ZIP code, amount, phone, email, state, required fields, and partial addresses. It produces explicit review state without inventing model confidence.
 
-Domain validation checks format and internal consistency. It does not establish that OCR read every field perfectly or that a merchant-reported financial figure is economically correct; those questions remain part of human review.
-
 ### `src/pipeline.py`
 
 Coordinates OCR, parsing, validation, review state, and local output. A validation failure remains a reviewable completed extraction; a structural/provider/OCR exception returns an explicit failed processing result.
 
-The pipeline does not infer missing financial facts and does not implement a generic autonomous underwriting decision engine.
-
 ### `src/crm_submit.py`
 
-The core `CRMSubmitter` creates local artifacts only. It does not simulate external acceptance or generate fake CRM IDs. `EnterpriseCRMSubmitter` is an optional adapter and blocks network transmission until deterministic validation has passed and explicit human approval is present.
+The core `CRMSubmitter` creates local artifacts only. `EnterpriseCRMSubmitter` is an optional adapter and blocks network transmission until deterministic validation has passed and explicit human approval is present.
 
-CSV string cells are escaped at serialization to reduce spreadsheet formula injection. JSON retains original values. The public connector rechecks literal boolean approval and state, and the submitter blocks transmission after local output failure. Approval flags do not authenticate a user; integrations must supply trusted validation and approval metadata.
+CSV string cells are escaped at serialization to reduce spreadsheet formula injection. JSON retains original values. The public connector rechecks literal boolean approval and state, and the submitter blocks transmission after local output failure.
 
 ### `src/gui/`
 
 Contains the PySide6 desktop interface and a separate provider-discovery widget. The main configuration dialog supports the provider IDs consumed by the pipeline. Provider discovery remains separate to avoid coupling startup to scanning local services.
 
-The main desktop shows OCR text, extracted fields, validation/review state, local-model configuration, and batch results. Input/configuration changes and overlapping workers are blocked while processing is active.
+The desktop shows OCR text, extracted fields, validation/review state, local-model configuration, and batch results. Input/configuration changes and overlapping workers are blocked while processing is active.
 
 ### `src/config.py` and `src/cli.py`
 
 Configuration is a bounded set of provider/model/OCR settings stored in ignored local YAML. The headless CLI reuses `DocumentPipeline`, performs preflight checks, handles explicit input/configuration failures, and emits local result summaries with meaningful exit codes. No GUI dependency is imported by the CLI.
 
 ## Trust boundary
-
-The intended boundary is:
 
 ```text
 OCR text (source evidence)
@@ -87,12 +78,12 @@ OCR text (source evidence)
     -> domain validation
     -> human review against source evidence
     -> reviewed structured data
-    -> downstream deterministic calculations / policy rules
+    -> optional downstream workflow
 ```
 
-A model response never becomes trusted merely because it parsed successfully. Source grounding only establishes support in OCR text; it does not prove document meaning or economic truth. Missing values are not supplied by model inference.
+A model response never becomes trusted merely because it parsed successfully. Missing values are not supplied by model inference.
 
-For raw bank statements or processor statements, deriving revenue, deposit history, processing volume, or similar underwriting metrics requires dedicated statement-analysis logic; generic local-model extraction is not treated as a substitute.
+For raw bank statements or processor statements, deriving revenue, deposit history, processing volume, or similar underwriting metrics requires dedicated statement-analysis logic; generic field extraction is not treated as a substitute.
 
 ## Provenance
 
