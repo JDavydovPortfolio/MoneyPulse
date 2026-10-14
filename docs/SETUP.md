@@ -64,18 +64,18 @@ python -m pip install -r requirements-core.txt -c constraints-tested.txt
 
 ### Ollama
 
-Install Ollama, start its service, and download the verified model:
+Install Ollama, start its service, and download the default local model:
 
 ```bash
-ollama pull gemma4:e2b-it-qat
+ollama pull qwen3:8b
 ollama list
 ```
 
-Keep MoneyPulse's defaults (`ollama`, `http://localhost:11434`, `gemma4:e2b-it-qat`).
+Keep MoneyPulse's defaults (`ollama`, `http://localhost:11434`, `qwen3:8b`). On lower-memory systems, `qwen3:4b` can be used instead by changing the configured model.
 
 ### LM Studio
 
-Download Gemma 4 E2B QAT GGUF; the previous live verification used Q4_0. Load it or enable the server's model-loading behavior, then start its local API server on port 1234. In MoneyPulse, use **Settings → Configuration → Auto-detect Ollama / LM Studio** and save. The app uses the identifier exposed by the server; a GGUF filename is not necessarily that identifier.
+Download a Qwen3 8B GGUF (Q4_K_M is a practical starting point), load it or enable the server's model-loading behavior, then start the local API server on port 1234. In MoneyPulse, use **Settings → Configuration → Auto-detect Ollama / LM Studio** and save. The app uses the identifier exposed by the server; a GGUF filename is not necessarily that identifier.
 
 The app persists settings in local, git-ignored `config.yaml`. You can also copy `config.example.yaml` to `config.yaml` and edit the documented settings. Invalid settings fail explicitly. The desktop reports a saved-config error before using defaults.
 
