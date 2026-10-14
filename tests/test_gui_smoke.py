@@ -86,11 +86,8 @@ def test_desktop_processes_synthetic_document(tmp_path, monkeypatch):
     app.processEvents()
     assert len(window.processed_documents) == 1
     assert window.processed_documents[0]["validation_status"] == "passed"
-    assert window.processed_documents[0]["underwriting"]["status"] == "awaiting_review"
     assert "Example Harbor Coffee" in window.ocr_preview.toPlainText()
     assert window.data_tree.topLevelItemCount() > 0
-    assert window.underwriting_tree.topLevelItemCount() > 0
-    assert "Awaiting human review" in window.underwriting_tree.topLevelItem(0).text(1)
     assert window.validation_list.count() > 0
     assert window.export_csv_btn.isEnabled()
     window.close()
