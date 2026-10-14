@@ -1,7 +1,7 @@
 # Copy to config.yaml (ignored by git), or use the desktop Configuration dialog.
 llm_provider: ollama
 llm_host: http://localhost:11434
-model: gemma4:e2b-it-qat
+model: qwen3:8b
 
 # Local/private model endpoints are required by default. Set this to true only when
 # you intentionally want OCR-derived document text sent to a remote endpoint.
