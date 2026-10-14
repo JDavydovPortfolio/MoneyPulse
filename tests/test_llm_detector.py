@@ -8,7 +8,7 @@ def _mark_detected(detector, provider_id, host):
     }
 
 
-def test_detector_builds_pipeline_compatible_config_with_gemma_default():
+def test_detector_builds_pipeline_compatible_config_with_qwen3_default():
     detector = LLMProviderDetector()
     _mark_detected(detector, "ollama", "http://localhost:11434")
     detector.available_models["ollama"] = ["mistral:7b", RECOMMENDED_MODEL]
@@ -19,45 +19,45 @@ def test_detector_builds_pipeline_compatible_config_with_gemma_default():
     }
 
 
-def test_detector_recognizes_lm_studio_gemma_gguf_name():
+def test_detector_recognizes_lm_studio_qwen3_8b_name():
     detector = LLMProviderDetector()
     _mark_detected(detector, "lm_studio", "http://localhost:1234")
     detector.available_models["lm_studio"] = [
         "some-other-model",
-        "gemma-4-e2b-it-qat@q4_0",
+        "Qwen3-8B-Q4_K_M.gguf",
     ]
-    assert detector.get_recommended_model("lm_studio") == "gemma-4-e2b-it-qat@q4_0"
+    assert detector.get_recommended_model("lm_studio") == "Qwen3-8B-Q4_K_M.gguf"
 
 
-def test_detector_prefers_verified_e2b_qat_over_larger_e4b():
+def test_detector_prefers_qwen3_8b_over_qwen3_14b():
     detector = LLMProviderDetector()
     _mark_detected(detector, "lm_studio", "http://localhost:1234")
     detector.available_models["lm_studio"] = [
-        "google/gemma-4-e4b",
-        "gemma-4-e2b-it-qat@q4_0",
+        "Qwen3-14B-Q4_K_M.gguf",
+        "Qwen3-8B-Q4_K_M.gguf",
     ]
-    assert detector.get_recommended_model("lm_studio") == "gemma-4-e2b-it-qat@q4_0"
+    assert detector.get_recommended_model("lm_studio") == "Qwen3-8B-Q4_K_M.gguf"
 
 
-def test_detector_prefers_provider_with_gemma_over_provider_with_more_models():
+def test_detector_prefers_provider_with_qwen3_over_provider_with_unranked_models():
     detector = LLMProviderDetector()
     _mark_detected(detector, "ollama", "http://localhost:11434")
     _mark_detected(detector, "lm_studio", "http://localhost:1234")
     detector.available_models["ollama"] = ["model-a", "model-b", "model-c"]
-    detector.available_models["lm_studio"] = ["gemma-4-e2b-it-qat@q4_0"]
+    detector.available_models["lm_studio"] = ["Qwen3-8B-Q4_K_M.gguf"]
     assert detector.get_recommended_provider() == "lm_studio"
 
 
-def test_detector_prefers_ollama_when_both_have_recommended_gemma():
+def test_detector_prefers_ollama_when_both_have_recommended_qwen3():
     detector = LLMProviderDetector()
     _mark_detected(detector, "ollama", "http://localhost:11434")
     _mark_detected(detector, "lm_studio", "http://localhost:1234")
     detector.available_models["ollama"] = [RECOMMENDED_MODEL]
-    detector.available_models["lm_studio"] = ["gemma-4-e2b-it-qat@q4_0"]
+    detector.available_models["lm_studio"] = ["Qwen3-8B-Q4_K_M.gguf"]
     assert detector.get_recommended_provider() == "ollama"
 
 
-def test_detector_uses_gemma4_e2b_as_low_memory_fallback():
+def test_detector_uses_qwen3_4b_as_low_memory_fallback():
     detector = LLMProviderDetector()
     _mark_detected(detector, "ollama", "http://localhost:11434")
     detector.available_models["ollama"] = ["mistral:7b", RECOMMENDED_FALLBACK_MODEL]
