@@ -1,10 +1,10 @@
 # MoneyPulse
 
-**Local-first document intelligence for Merchant Cash Advance underwriting operations.**
+**Local-first AI document processing for Merchant Cash Advance underwriting and operations.**
 
-MoneyPulse turns merchant applications and supporting financial documents into structured, source-backed data for analyst and underwriter review. It combines OCR, configurable local-model field extraction, source grounding, deterministic validation, local JSON/CSV output, and optional downstream CRM integrations.
+MoneyPulse converts merchant applications and supporting financial documents into structured, source-backed data for analyst and underwriter review. It combines OCR, configurable local-model field extraction, source grounding, deterministic validation, local JSON/CSV output, and optional downstream CRM integrations.
 
-**Document → OCR → explicit source-field extraction → source evidence → validation → human review → downstream underwriting calculations/rules**
+**Document → OCR → source-backed field extraction → validation → analyst/underwriter review → downstream workflow**
 
 **[Setup and troubleshooting](docs/SETUP.md)** · **[Architecture](docs/ARCHITECTURE.md)** · **[Project brief](docs/PROJECT_BRIEF.md)** · **[Contributing](CONTRIBUTING.md)**
 
@@ -17,36 +17,34 @@ Actual desktop screenshot using a generated fictional document and real Tesserac
 - Reads PDF and image documents with Tesseract OCR.
 - Uses Ollama, LM Studio, llama.cpp-compatible servers, or optional Transformers to map OCR text into structured fields.
 - Accepts a model-proposed value only when it can be reconciled with the OCR source text.
-- Extracts fields such as merchant name, contact information, address, requested funding, and business information when those values are explicitly present in the source document.
+- Extracts merchant, contact, address, funding, and business fields when those values are present in the source document.
 - Applies deterministic schema and domain validation.
-- Records source/provenance information so extracted values can be checked against the document.
-- Produces local JSON and CSV artifacts for analyst/underwriter review and downstream underwriting workflows.
-- Supports optional CRM integrations behind separate approval gates.
+- Preserves provenance so extracted values can be checked against the source.
+- Produces local JSON and CSV artifacts for review and downstream workflows.
+- Supports optional CRM integrations behind explicit approval gates.
 
-MoneyPulse does **not** ask the local model to invent missing revenue, processing volume, years in business, or other financial facts. If a source document does not contain a supported value, the field remains missing rather than being inferred.
+Financial fields remain source-backed: if a value is not supported by OCR text, MoneyPulse leaves the field missing instead of filling it by model inference.
 
 ## Why it exists
 
-MCA underwriting often begins with merchant applications, statements, scans, images, and supporting financial documents. Before an underwriter can evaluate a file, information commonly has to be read, re-keyed, normalized, and checked against the original source.
+MCA underwriting often starts with merchant applications, scans, images, and supporting financial documents. Before an underwriter can evaluate a file, information has to be read, re-keyed, normalized, and checked against the original source.
 
-MoneyPulse automates that document-intake and data-preparation layer. The model helps locate and structure information that appears in the document; it is not treated as an independent source of financial truth.
+MoneyPulse automates that intake and data-preparation layer so analysts can move from raw documents to structured, reviewable data while keeping source evidence attached to the workflow.
 
-## Processing model
+## Processing flow
 
 ```text
 document
   -> OCR/source text
-  -> local model proposes field values
-  -> each proposed value is checked against source text
+  -> local model proposes explicit field values
+  -> source grounding
   -> schema + domain validation
-  -> analyst/underwriter review against source evidence
-  -> local structured output
-  -> deterministic underwriting calculations/rules in the approved downstream workflow
+  -> analyst / underwriter review
+  -> local JSON / CSV
+  -> optional downstream CRM / underwriting workflow
 ```
 
-The distinction matters: source grounding can show that a proposed value appears in the OCR text. It does not prove that OCR read the document perfectly or that a merchant-reported figure is economically correct. Those questions remain part of review and underwriting.
-
-MoneyPulse currently stops at source-backed extraction, validation, review state, and integration-ready output. It does not currently implement autonomous credit decisions or a generic underwriting policy engine. Any underwriting calculations or approval rules should operate on reviewed values under the lender/ISO's actual policy rather than on model guesses.
+The local model acts as a field-extraction aid. MoneyPulse independently checks proposed values against OCR text before allowing them to propagate through the pipeline.
 
 ## Supported local-model providers
 
@@ -58,8 +56,6 @@ MoneyPulse currently stops at source-backed extraction, validation, review state
 | Hugging Face Transformers | In-process | Optional dependency set |
 
 MoneyPulse defaults to **Qwen3 8B** for local extraction. **Qwen3 4B** is a lower-memory option.
-
-The local model is used as a structured-field extraction aid. It is prompted not to guess, and MoneyPulse independently checks proposed values against OCR source text before accepting them.
 
 ## Quick start
 
@@ -96,21 +92,13 @@ LM Studio users can load a compatible Qwen3 GGUF and start the local API server 
 
 ## Synthetic demo
 
-The repository includes a deterministic demo built from fictional data. It creates an image, performs real OCR, runs the extraction/validation pipeline, and writes local output.
+The repository includes a deterministic demo built from fictional data. It creates a synthetic merchant document, performs real OCR, runs the extraction and validation pipeline, and writes local output.
 
-The fixture demonstrates the trust boundary: if the deterministic test provider proposes a value that is not present in the generated OCR source, MoneyPulse rejects that value instead of accepting it merely because the provider returned it.
+The fixture provider is deterministic so the demo can exercise the pipeline without downloading a live model.
 
 ## Desktop application
 
-The PySide6 desktop app supports:
-
-- document selection and drag/drop;
-- OCR preview;
-- structured field review;
-- validation issues and review state;
-- provider/model configuration;
-- local JSON/CSV output;
-- batch result inspection.
+The PySide6 desktop app supports document selection and drag/drop, OCR preview, structured field review, validation issues and review state, provider/model configuration, local JSON/CSV output, and batch result inspection.
 
 Settings persist in git-ignored `config.yaml`.
 
@@ -123,23 +111,17 @@ python -m src.cli process input --output output
 
 The CLI uses the same extraction and validation pipeline as the desktop application.
 
-## Trust boundary
+## Source grounding and validation
 
-Model output is untrusted. A proposed value must survive source grounding before it can propagate through the extraction pipeline.
+Model output is treated as proposed data. Before a field value can propagate, MoneyPulse checks that it is supported by the OCR source text.
 
-Examples:
+Examples include matching requested funding amounts near request/funding language, matching revenue values near revenue language, matching processing-volume values near processing/volume language, and normalizing identifiers/contact fields before comparing them with OCR text.
 
-- a proposed requested amount must match an amount appearing in the OCR text near funding/request language;
-- a proposed annual revenue value must match an amount appearing near revenue language;
-- a proposed processing-volume value must match an amount appearing near processing/volume language;
-- identifiers and contact fields are normalized and matched back to OCR text;
-- missing values are not filled by model inference.
-
-Source grounding reduces hallucinated field values. It does not replace human review of OCR quality, document meaning, or merchant-reported information.
+Source grounding is followed by versioned schema validation and deterministic domain checks. The resulting structured data and provenance remain available for analyst/underwriter review before downstream use.
 
 ## Privacy model
 
-When a local backend is selected, OCR and inference can remain on the operator's machine or private network. Remote model endpoints require explicit `allow_remote_llm: true` configuration.
+When a local backend is selected, OCR and model inference can remain on the operator's machine or private network. Remote model endpoints require explicit `allow_remote_llm: true` configuration.
 
 Network activity can still occur when packages or model weights are downloaded or when an optional external integration is intentionally configured.
 
@@ -170,12 +152,6 @@ python -m pytest -q
 ```
 
 The deterministic provider tests use generated fictional data and do not require a live model server. OCR integration tests require Tesseract.
-
-## Current scope
-
-MoneyPulse is focused on document intake, source-grounded structured extraction, validation, reviewable local output, and integration-ready data preparation for MCA underwriting workflows.
-
-It does not currently infer missing merchant financial facts, derive annual revenue or processing history from raw statements without dedicated statement-analysis logic, or make autonomous approval/decline decisions.
 
 ## Documentation
 
