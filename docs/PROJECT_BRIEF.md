@@ -2,45 +2,48 @@
 
 ## Overview
 
-MoneyPulse is a local-first AI document-intelligence pipeline for Merchant Cash Advance underwriting and operations. It converts merchant applications and supporting financial documents into structured, validated underwriting data that can be reviewed locally or passed into downstream workflows.
+MoneyPulse is a local-first document-intelligence pipeline for Merchant Cash Advance underwriting operations. It converts merchant applications and supporting financial documents into structured, source-backed data for analyst and underwriter review.
 
-The project combines OCR, configurable local LLM inference, source-grounded extraction, deterministic schema/domain validation, underwriting pre-screen signals, desktop/headless workflows, and optional CRM integration.
+The project combines OCR, configurable local-model extraction, source grounding, deterministic schema/domain validation, desktop/headless workflows, reviewable local output, and optional CRM integration.
 
 ## Problem
 
-MCA teams routinely receive merchant information in PDFs, scans, images, applications, and supporting financial documents. Before an underwriter can evaluate a file, that information often has to be read, re-keyed, normalized, and checked manually.
+MCA teams routinely receive merchant information in PDFs, scans, images, applications, and supporting documents. Before an underwriter can evaluate a file, that information often has to be read, re-keyed, normalized, and checked against the original source.
 
-MoneyPulse automates that intake layer while keeping the underlying source visible and the rules inspectable.
+MoneyPulse automates that intake and data-preparation layer while preserving source evidence.
 
 ## Core workflow
 
 ```text
 merchant documents
-  -> OCR
-  -> local AI extraction
+  -> OCR/source text
+  -> local model proposes explicit field values
   -> source grounding
   -> schema + domain validation
-  -> underwriting metrics
-  -> optional deterministic pre-screen policy
   -> analyst / underwriter review
+  -> deterministic derived calculations on approved values
   -> local JSON / CSV
-  -> optional CRM workflow
+  -> optional downstream CRM workflow
 ```
 
-## Underwriting support
+## Extraction boundary
 
-MoneyPulse calculates structured pre-underwriting signals from validated merchant data, including:
+The local model is used to map OCR text into structured fields. It is not used as an independent source of financial facts.
 
-- requested funding amount;
-- annual revenue;
-- processing volume;
-- years in business;
+A proposed value is accepted only when MoneyPulse can reconcile it with the OCR source. If annual revenue, processing volume, years in business, requested funding, or another optional field is not supported by source text, the value remains missing rather than being guessed.
+
+Source grounding establishes that a value is supported by OCR text; it does not establish that OCR is perfect or that a merchant-reported figure is economically correct. Human review remains necessary before those values are relied on for underwriting.
+
+## Derived calculations
+
+`src/underwriting.py` performs only review-gated arithmetic. It does not generate approval/decline recommendations and does not infer missing financial inputs.
+
+Derived ratios are calculated only after explicit human approval of the structured record. Current calculations include:
+
 - requested amount relative to annual revenue;
 - requested amount relative to processing volume.
 
-Operators can optionally configure deterministic business-policy thresholds for those signals. When policy rules are present, MoneyPulse returns an auditable pre-screen recommendation of `advance`, `manual_review`, or `needs_more_data`, together with each rule's input, threshold, and result.
-
-The policy engine is deliberately separate from the LLM so underwriting rules are not improvised by model output.
+If an approved input is missing, the related derived metric remains missing.
 
 ## Local AI architecture
 
@@ -63,17 +66,15 @@ Model output is treated as proposed data rather than unquestioned truth. Before 
 4. record provenance and rejected attempts;
 5. expose flagged issues and review state in the desktop UI.
 
-This architecture is designed to make automated extraction useful in a financial workflow without hiding where values came from.
-
 ## Interfaces
 
 ### Desktop
 
-The PySide6 desktop application supports document selection, batch processing, OCR inspection, extracted-data review, underwriting signals, validation results, local-model configuration, underwriting-policy configuration, CSV export, and output-folder access.
+The PySide6 desktop application supports document selection, batch processing, OCR inspection, extracted-data review, validation results, local-model configuration, CSV export, and output-folder access.
 
 ### Headless
 
-The CLI exposes the same processing pipeline for scripted or server-side use:
+The CLI exposes the same extraction and validation pipeline for scripted or server-side use:
 
 ```bash
 python -m src.cli doctor
@@ -82,7 +83,7 @@ python -m src.cli process input --output output
 
 ## Output
 
-MoneyPulse produces reviewable local artifacts, including structured JSON and CSV summaries. Underwriting pre-screen results are included in the local JSON output. External integrations are optional and separately configurable.
+MoneyPulse produces reviewable local artifacts, including structured JSON and CSV summaries. External integrations are optional and separately configurable.
 
 ## Privacy model
 
@@ -94,10 +95,9 @@ Python · PySide6 · Tesseract OCR · pdf2image/Poppler · local LLMs · Ollama 
 
 ## Quick evaluation
 
-1. Follow the [README quick start](../README.md#try-it-in-a-few-minutes).
-2. Run `python examples/run_synthetic_demo.py` to exercise OCR and the processing pipeline on generated fictional data.
+1. Follow the [README quick start](../README.md#quick-start).
+2. Run `python examples/run_synthetic_demo.py` to exercise OCR and source-grounded extraction on generated fictional data.
 3. Launch `python main.py` for the desktop workflow.
 4. Configure Qwen3 through Ollama or LM Studio for live local-model extraction.
-5. Add optional underwriting policy thresholds in the desktop Configuration dialog to exercise deterministic pre-screen rules.
 
 See [Architecture](ARCHITECTURE.md), [Setup](SETUP.md), and [Security](../SECURITY.md) for implementation details.
