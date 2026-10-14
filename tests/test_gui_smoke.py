@@ -18,7 +18,7 @@ def test_desktop_window_initializes_offscreen(tmp_path, monkeypatch):
 
     assert window.windowTitle().startswith("MoneyPulse")
     assert window.pipeline.llm.provider_id == "ollama"
-    assert window.pipeline.llm.model == "gemma4:e2b-it-qat"
+    assert window.pipeline.llm.model == "qwen3:8b"
     assert window.process_btn.isEnabled() is False
 
     window.close()
@@ -86,8 +86,10 @@ def test_desktop_processes_synthetic_document(tmp_path, monkeypatch):
     app.processEvents()
     assert len(window.processed_documents) == 1
     assert window.processed_documents[0]["validation_status"] == "passed"
+    assert window.processed_documents[0]["underwriting"]["status"] == "ready"
     assert "Example Harbor Coffee" in window.ocr_preview.toPlainText()
     assert window.data_tree.topLevelItemCount() > 0
+    assert window.underwriting_tree.topLevelItemCount() > 0
     assert window.validation_list.count() > 0
     assert window.export_csv_btn.isEnabled()
     window.close()
