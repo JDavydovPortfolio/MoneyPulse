@@ -286,7 +286,7 @@ class LLMProviderWidget(QWidget):
         <ol>
         <li>Choose your preferred provider from the list above</li>
         <li>Follow the installation instructions for your chosen provider</li>
-        <li>Download and load a model (recommended: Gemma 4 E2B QAT)</li>
+        <li>Download and load a model (recommended: Qwen3 8B; Qwen3 4B for lower-memory systems)</li>
         <li>Start the provider's server</li>
         <li>Click "Refresh Detection" in this dialog</li>
         <li>Select your provider and model from the dropdowns</li>
@@ -307,7 +307,7 @@ class LLMProviderWidget(QWidget):
         <li>Make sure your firewall allows connections to the provider's port</li>
         <li>Some models require significant RAM (8GB+ recommended)</li>
         <li>GPU acceleration can significantly improve performance</li>
-        <li>Start with smaller models (2B-7B parameters) for testing</li>
+        <li>Start with smaller models (4B-8B parameters) for testing</li>
         </ul>
         """)
         
@@ -338,4 +338,4 @@ class LLMProviderWidget(QWidget):
     
     def get_selected_model(self) -> Optional[str]:
         """Get the currently selected model name."""
-        return self.current_model 
+        return self.current_model
