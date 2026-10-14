@@ -1,13 +1,13 @@
 # MoneyPulse Architecture
 
-MoneyPulse is a local-first document-processing pipeline with explicit boundaries between source extraction, untrusted model output, deterministic validation, review, and optional downstream transmission.
+MoneyPulse is a local-first document-processing pipeline with explicit boundaries between OCR source text, model-assisted field extraction, source grounding, deterministic validation, human review, review-gated derived calculations, and optional downstream transmission.
 
 ## Processing flow
 
 ```mermaid
 flowchart TD
     A[PDF / image input] --> B[OCRProcessor]
-    B --> C[Source text]
+    B --> C[OCR source text]
     C --> D[LLMParser]
     D --> E[LLMProvider]
     E --> E1[Ollama]
@@ -17,11 +17,12 @@ flowchart TD
     D --> F[Source-grounded versioned extraction + provenance]
     F --> G[Structural schema validation]
     G --> H[Domain validation]
-    H --> I{Review state}
-    I --> J[Local JSON / CSV]
-    I --> K{Explicit approval?}
-    K -->|No| L[External transmission blocked]
-    K -->|Yes, validated + approved| M[Optional CRM adapter]
+    H --> I[Analyst / underwriter review against source evidence]
+    I --> J[Local reviewable JSON / CSV]
+    I --> K{Explicitly approved?}
+    K -->|No| L[Derived calculations remain blocked]
+    K -->|Yes| M[Deterministic derived ratios]
+    M --> N[Optional downstream CRM workflow]
 ```
 
 ## Components
@@ -36,7 +37,11 @@ Defines the model-provider interface. Local HTTP providers use explicit request 
 
 ### `src/llm.py`
 
-Splits source text into word-bounded chunks and attempts each expected field across chunks. Model-proposed values must reconcile with the producing OCR chunk before propagation; unsupported guesses are discarded, and raw attempts remain in provenance. Response cleanup strips only recognized field/answer prefixes, preserving legitimate colons inside values.
+Splits source text into word-bounded chunks and attempts each expected field across chunks. The model is used as a field-mapping aid, not as an independent source of financial facts.
+
+A model-proposed value must reconcile with the OCR chunk that produced it before propagation. Unsupported guesses are discarded, and raw attempts remain in provenance. If a financial value such as annual revenue, processing volume, years in business, or requested amount is not supported by OCR source text, MoneyPulse leaves it missing rather than inferring it.
+
+Response cleanup strips only recognized field/answer prefixes, preserving legitimate colons inside values.
 
 ### `src/schema.py`
 
@@ -46,9 +51,19 @@ Defines extraction schema version `1.0` and validates exact expected fields, nes
 
 Runs structural validation first, followed by deterministic domain checks for fields such as EIN/SSN, ZIP code, amount, phone, email, state, required fields, and partial addresses. It produces explicit review state without inventing model confidence.
 
+Domain validation checks format and internal consistency. It does not establish that OCR read every field perfectly or that a merchant-reported financial figure is economically correct; those questions remain part of human review.
+
+### `src/underwriting.py`
+
+Contains review-gated deterministic arithmetic only. It does not infer source fields and does not generate approval/decline recommendations.
+
+Fresh extraction results return an `awaiting_review` state. Derived ratios are calculated only when the structured record has explicit `review_approved: true` and `review_state: approved` values. Current derived metrics are requested amount relative to annual revenue and requested amount relative to processing volume. Missing reviewed inputs remain missing.
+
 ### `src/pipeline.py`
 
-Coordinates OCR, parsing, validation, and local output. A validation failure remains a reviewable completed extraction; a structural/provider/OCR exception returns an explicit failed processing result.
+Coordinates OCR, parsing, validation, review state, and local output. Freshly extracted documents are not treated as approved inputs. The pipeline exposes the review-gated derived-metrics state but does not bypass human review to calculate or act on financial ratios.
+
+A validation failure remains a reviewable completed extraction; a structural/provider/OCR exception returns an explicit failed processing result.
 
 ### `src/crm_submit.py`
 
@@ -60,7 +75,7 @@ CSV string cells are escaped at serialization to reduce spreadsheet formula inje
 
 Contains the PySide6 desktop interface and a separate provider-discovery widget. The main configuration dialog supports the provider IDs consumed by the pipeline. Provider discovery remains separate to avoid coupling startup to scanning local services.
 
-The main desktop saves validated settings atomically, selects individual batch results, shows optional business/funding fields, and renders source/log strings as plain text. Input/configuration changes and overlapping workers are blocked while processing is active.
+The desktop interface shows OCR text, extracted fields, validation/review state, and the status of review-gated derived metrics. It does not present generic automated approval recommendations. Input/configuration changes and overlapping workers are blocked while processing is active.
 
 ### `src/config.py` and `src/cli.py`
 
@@ -72,21 +87,21 @@ The intended boundary is:
 
 ```text
 OCR text (source evidence)
-    -> model response (untrusted)
-    -> source-grounded extraction (still requires review)
+    -> model-proposed field value (untrusted)
+    -> source-grounded structured field
     -> schema validation
     -> domain validation
-    -> review state
-    -> local output
-    -> explicit human approval
-    -> optional external integration
+    -> human review against source evidence
+    -> approved structured values
+    -> deterministic derived calculations
+    -> optional downstream integration
 ```
 
-A model response never becomes trusted merely because it parsed successfully. Schema validation rejects unexpected structure, and domain validation does not turn an extraction into a credit/funding decision.
+A model response never becomes trusted merely because it parsed successfully. Source grounding only establishes support in OCR text; it does not prove document meaning or economic truth. Missing values are not supplied by model inference.
 
 ## Provenance
 
-Extraction provenance records source file, provider/model, document chunk count, and raw field attempts. This helps a reviewer distinguish source/model behavior from validated values. Default CRM-shaped local output deliberately omits raw model-response provenance to avoid unnecessarily propagating model text downstream.
+Extraction provenance records source file, provider/model, document chunk count, and raw field attempts. This helps a reviewer distinguish source/model behavior from accepted structured values. Default CRM-shaped local output deliberately omits raw model-response provenance to avoid unnecessarily propagating model text downstream.
 
 ## Privacy boundaries
 
