@@ -4,22 +4,15 @@ All notable MoneyPulse changes are documented here.
 
 ## Unreleased
 
-### Source-grounded underwriting workflow support
+### Source-grounded extraction and local AI
 
 - Keep the local model in a field-extraction role: proposed values must be supported by OCR source text before they can propagate.
 - Reject unsupported annual-revenue, processing-volume, years-in-business, funding, and other optional field proposals instead of inferring missing merchant facts.
-- Remove the unsupported generic underwriting pre-screen/recommendation layer that was briefly introduced during this unreleased cycle.
-- Remove the temporary `advance`, `manual_review`, and `needs_more_data` recommendation semantics, configurable underwriting-policy thresholds, and the temporary underwriting calculation module/UI.
-- Restore the product boundary to source-backed document intake, validation, analyst/underwriter review, local output, and downstream integration.
-- Keep lender/ISO-specific underwriting calculations and policy rules downstream of human review, operating on approved source-backed values rather than model guesses.
-- Update tests and the synthetic workflow so model-proposed values absent from OCR source text are rejected rather than treated as financial facts.
-
-### Local AI and public positioning
-
+- Preserve provenance so accepted and rejected model attempts remain reviewable against the source document.
+- Keep the current product boundary at source-backed document intake, validation, analyst/underwriter review, local output, and downstream integration.
 - Change the default local extraction model to Qwen3 8B, with Qwen3 4B as the lower-memory fallback.
 - Replace current user-facing Gemma setup recommendations with Qwen3 guidance while preserving historical verification notes as historical records.
-- Refocus the README on MoneyPulse's actual MCA workflow: OCR, source-backed field extraction, deterministic validation, analyst/underwriter review, and downstream data preparation.
-- Make explicit that the model is not used to invent missing merchant financial facts or act as an autonomous underwriting decision engine.
+- Refocus public documentation on MoneyPulse's implemented MCA workflow: OCR, source-backed field extraction, deterministic validation, analyst/underwriter review, and downstream data preparation.
 
 ## [1.0.0] - 2026-10-12
 
