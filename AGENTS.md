@@ -4,18 +4,19 @@ This file defines repository-level engineering guidance for coding agents and au
 
 ## Project purpose
 
-MoneyPulse is a local-first financial-document processing pipeline. The core flow is OCR -> local/model-backed structured extraction -> source grounding -> deterministic schema/domain validation -> explicit human review -> local output, with optional external integrations behind separate approval gates.
+MoneyPulse is a local-first financial-document intelligence pipeline for Merchant Cash Advance underwriting and operations. The core flow is OCR -> local/model-backed structured extraction -> source grounding -> deterministic schema/domain validation -> deterministic underwriting signals and optional policy pre-screen -> review -> local output, with optional external integrations.
 
-Preserve working software. Prefer small, evidence-backed changes over rewrites or architectural churn.
+Preserve working software. Prefer small, evidence-backed changes over architectural churn.
 
 ## Non-negotiable trust boundaries
 
-1. **Model output is untrusted.** Do not bypass source grounding, versioned schema validation, domain validation, provenance, or explicit review state.
+1. **Model output is untrusted.** Do not bypass source grounding, versioned schema validation, domain validation, or provenance.
 2. **Never invent missing financial/contact values.** Unsupported model guesses must be rejected rather than silently corrected or synthesized.
-3. **Remote inference is opt-in.** HTTP model providers must remain local/private by default. Any path that can send OCR-derived text to a public endpoint must require deliberate configuration and documentation.
-4. **External transmission requires approval.** Do not let CRM/integration failures, truthy non-booleans, or alternate entry points bypass deterministic validation and explicit human approval.
-5. **Synthetic fixtures only.** Never add real merchant/applicant documents, tax IDs, bank data, credentials, generated runtime output, logs, or local configuration to the repository.
-6. **No unsupported claims.** Do not add accuracy, speed, privacy, security, underwriting, compliance, adoption, or benchmark claims without reproducible evidence.
+3. **Underwriting policy is deterministic.** LLM output must not invent approval thresholds or silently alter business-policy rules. Pre-screen rules must expose their actual values, thresholds, and outcomes.
+4. **Remote inference is opt-in.** HTTP model providers remain local/private by default. Any path that sends OCR-derived text to a public endpoint requires deliberate configuration and documentation.
+5. **External transmission stays explicit.** CRM/network integrations must not happen implicitly as a side effect of local processing.
+6. **Synthetic fixtures only.** Never add real merchant/applicant documents, tax IDs, bank data, credentials, generated runtime output, logs, or local configuration to the repository.
+7. **No unsupported claims.** Do not add accuracy, speed, privacy, security, compliance, adoption, or benchmark claims without reproducible evidence.
 
 ## Dependency boundaries
 
@@ -39,13 +40,13 @@ python -m compileall -q main.py src tests examples
 python -m pytest -q
 ```
 
-For release-oriented changes, use the repository verifier:
+For clean-environment verification:
 
 ```bash
 python scripts/verify.py --fresh
 ```
 
-Run the fresh gate with supported Python 3.12 and 3.13 before tagging a source release. Changes to extraction, prompts, provider adapters, or model defaults also require a real local-model smoke test on the intended backend. Desktop releases require a native target-platform launch/workflow check. See `docs/RELEASE.md` and `docs/VERIFICATION.md`.
+Changes to extraction, prompts, provider adapters, or model defaults should also receive a real local-model smoke test on the intended backend when practical. Desktop changes should be exercised on the target platform. Historical verification records live in `docs/VERIFICATION.md`.
 
 A test that was not run is **not** a pass. Record infrastructure failures separately from software failures.
 
