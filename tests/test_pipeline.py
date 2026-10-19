@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
@@ -130,6 +131,72 @@ def test_pipeline_fails_safely_on_malformed_provider_output(tmp_path):
 
     assert result["processing_status"] == "failed"
     assert "schema" in result["error"].lower() or "missing" in result["error"].lower()
+
+
+def test_unsupported_document_classification_blocks_validated_output(tmp_path, monkeypatch):
+    """An invoice guess stays blocked when OCR lacks an explicit funding cue."""
+    image_path = tmp_path / "synthetic.png"
+    _synthetic_image(image_path)
+    pipeline = _pipeline(tmp_path)
+    extract_text = pipeline.ocr.extract_text
+
+    def without_funding_cue(path):
+        return extract_text(path).replace("Requested Funding Amount: $75,000", "Funding discussion")
+
+    monkeypatch.setattr(pipeline.ocr, "extract_text", without_funding_cue)
+    generate = pipeline.llm.provider.generate
+
+    def misclassify(prompt, max_tokens=128, temperature=0.0):
+        if "identify the document type" in prompt.lower():
+            return "invoice"
+        return generate(prompt, max_tokens=max_tokens, temperature=temperature)
+
+    monkeypatch.setattr(pipeline.llm.provider, "generate", misclassify)
+    result = pipeline.process_single_document(str(image_path))
+
+    assert result["processing_status"] == "completed"
+    assert result["merchant_name"] == "Example Harbor Coffee LLC"
+    assert result["document_type"] == ""
+    assert result["provenance"]["field_attempts"]["document_type"] == [
+        {"chunk_index": 0, "raw_response": "invoice"}
+    ]
+    assert result["validation_status"] == "failed"
+    assert result["review_state"] == "needs_correction"
+    assert result["review_approved"] is False
+    assert result["output_result"]["status"] == "blocked"
+    assert result["output_result"]["destination"] == "local_only"
+    payload = json.loads(Path(result["output_result"]["json_file"]).read_text())
+    assert payload["application_details"]["document_type"] == ""
+    assert payload["processing_metadata"]["validation_status"] == "failed"
+    assert payload["processing_metadata"]["review_approved"] is False
+
+
+def test_explicit_funding_cue_recovers_application_from_ungrounded_label(tmp_path, monkeypatch):
+    """A specific OCR label can recover type without bypassing review controls."""
+    image_path = tmp_path / "synthetic.png"
+    _synthetic_image(image_path)
+    pipeline = _pipeline(tmp_path)
+    generate = pipeline.llm.provider.generate
+
+    def misclassify(prompt, max_tokens=128, temperature=0.0):
+        if "identify the document type" in prompt.lower():
+            return "invoice"
+        return generate(prompt, max_tokens=max_tokens, temperature=temperature)
+
+    monkeypatch.setattr(pipeline.llm.provider, "generate", misclassify)
+    result = pipeline.process_single_document(str(image_path))
+
+    assert result["processing_status"] == "completed"
+    assert result["document_type"] == "application"
+    assert result["validation_status"] == "passed"
+    assert result["review_state"] == "needs_review"
+    assert result["requires_human_review"] is True
+    assert "Document type derived" in result["flagged_issues"][0]
+    assert result["review_approved"] is False
+    assert result["output_result"]["status"] == "prepared"
+    assert result["output_result"]["destination"] == "local_only"
+    attempts = result["provenance"]["field_attempts"]["document_type"]
+    assert attempts == [{"chunk_index": 0, "raw_response": "invoice"}]
 
 
 def test_pipeline_rejects_unsupported_input_before_ocr(tmp_path):

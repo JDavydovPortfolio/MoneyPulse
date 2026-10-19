@@ -88,3 +88,30 @@ def test_parser_records_raw_model_attempts_without_trusting_missing_markers():
     assert result["merchant_name"] == ""
     attempts = result["provenance"]["field_attempts"]["merchant_name"]
     assert attempts == [{"chunk_index": 0, "raw_response": "N/A"}]
+
+
+@pytest.mark.parametrize("text", [
+    "Requested Funding Amount: $75000",
+    "Business Name: Example LLC. Unrequested funding amount: $75000",
+    "Invoice. Business Name: Example LLC. Requested Funding Amount: $75000",
+    "Bank statement. Business Name: Example LLC. Requested Funding Amount: $75000",
+    "Loan agreement. Business Name: Example LLC. Requested Funding Amount: $75000",
+    "Business Name: Example LLC. Requested Funding Amount: $75000 " + "filler " * 512 + "Contract",
+])
+def test_document_type_fallback_withholds_missing_or_conflicting_evidence(text):
+    parser = LLMParser(provider="test", provider_instance=FakeProvider(lambda prompt: "unknown"))
+    result = parser.parse_document(text)
+    assert result["document_type"] == ""
+    assert result["review_approved"] is False
+    assert result["flagged_issues"] == []
+
+
+@pytest.mark.parametrize("source, expected", [
+    ("Business Name: Example Harbor Coffee LLC", ""),
+    ("Business Name: Example Harbor LLC. Business Type: Coffee Shop", "Coffee Shop"),
+])
+def test_business_type_requires_a_type_label_not_just_a_matching_company_name(source, expected):
+    candidate = "Coffee Shop" if expected else "Coffee LLC"
+    provider = FakeProvider(lambda prompt: candidate if "Extract the business type" in prompt else "")
+    result = LLMParser(provider="test", provider_instance=provider).parse_document(source)
+    assert result["business_info"]["business_type"] == expected

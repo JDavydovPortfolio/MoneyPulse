@@ -254,6 +254,10 @@ class LMStudioProvider(OpenAICompatibleProvider):
         output = data.get("output") if isinstance(data, dict) else None
         if not isinstance(output, list):
             raise ValueError("LM Studio response did not include output messages")
+        # A completed empty answer (for a missing field) has no output items.
+        # Reasoning-only or malformed nonempty output must still fail below.
+        if not output:
+            return ""
         messages = [
             item.get("content")
             for item in output

@@ -93,6 +93,14 @@ class LLMParser:
             values[field] = value
             field_attempts[field] = attempts
 
+        issues = []
+        if not values["document_type"] and self._has_explicit_funding_application_cue(chunks):
+            values["document_type"] = "application"
+            issues.append(
+                "Document type derived from business-name and requested-funding-amount "
+                "labels after no model classification was accepted; confirm against the source."
+            )
+
         source_file = filename or "unknown"
         structured_data = {
             "schema_version": SCHEMA_VERSION,
@@ -117,7 +125,7 @@ class LLMParser:
             },
             "requested_amount": values["requested_amount"],
             "source_file": source_file,
-            "flagged_issues": [],
+            "flagged_issues": issues,
             "llm_provider": self.provider_id,
             "llm_model": self.model,
             "review_state": "unreviewed",
@@ -172,6 +180,16 @@ class LLMParser:
                 chunk_index,
             )
         return "", attempts
+
+    @classmethod
+    def _has_explicit_funding_application_cue(cls, chunks: List[str]) -> bool:
+        """Recognize funding application cues, withholding ambiguous document types."""
+        normalized = cls._normalize_text(" ".join(chunks))
+        return (
+            re.search(r"\brequested funding amount\b", normalized) is not None
+            and re.search(r"\b(?:business|merchant) name\b", normalized) is not None
+            and re.search(r"\b(?:invoice|statement|agreement|contract)\b", normalized) is None
+        )
 
     @staticmethod
     def _normalize_text(value: str) -> str:
@@ -266,6 +284,13 @@ class LLMParser:
         normalized_source = self._normalize_text(source)
         if not normalized_value:
             return False
+
+        if field == "business_type":
+            return re.search(
+                rf"\b(?:business type|type of business|industry|nature of business) "
+                rf"{re.escape(normalized_value)}\b",
+                normalized_source,
+            ) is not None
 
         if field == "document_type":
             if normalized_value in normalized_source:

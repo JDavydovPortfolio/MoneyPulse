@@ -4,8 +4,18 @@ All notable MoneyPulse changes are documented here.
 
 ## Unreleased
 
+### Verification and setup
+
+- Recheck source in fresh Python 3.12.13 and 3.13.15 environments (109 tests before the final fixes), then pass the expanded 119-test suite and the live Qwen3 8B Windows desktop workflow.
+- Record an independent core-only install, current dependency vulnerability audit, displayed Windows fixture workflow and targeted reachable-history review.
+- Refresh the desktop screenshot to the current interface, label its deterministic fixture provider and document environment activation in the quick start.
+
 ### Source-grounded extraction and local AI
 
+- Recover an unsupported document-type proposal only from explicit application cues, reject conflicting document labels, and surface the derived type for human review while preserving raw model attempts.
+- Handle LM Studio's empty native output list as an absent extracted value; continue rejecting malformed and reasoning-only responses.
+- Require an explicit type/industry label before accepting business type, preventing a company-name substring from filling an absent type field.
+- Add regression coverage for the reproduced Qwen classification failure, ambiguous source cues and LM Studio's empty-answer format.
 - Keep the local model in a field-extraction role: proposed values must be supported by OCR source text before they can propagate.
 - Reject unsupported annual-revenue, processing-volume, years-in-business, funding, and other optional field proposals instead of inferring missing merchant facts.
 - Preserve provenance so accepted and rejected model attempts remain reviewable against the source document.

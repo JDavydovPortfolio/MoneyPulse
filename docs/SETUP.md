@@ -71,7 +71,7 @@ ollama pull qwen3:8b
 ollama list
 ```
 
-Keep MoneyPulse's defaults (`ollama`, `http://localhost:11434`, `qwen3:8b`). On lower-memory systems, `qwen3:4b` can be used instead by changing the configured model.
+Keep MoneyPulse's defaults (`ollama`, `http://localhost:11434`, `qwen3:8b`). Changing the configured model allows lower-memory choices such as `qwen3:4b`, but Qwen3 4B failed the recorded document-classification smoke check through LM Studio and is not a verified substitute. Evaluate any model on the intended document layouts before relying on its results; see [VERIFICATION.md](VERIFICATION.md).
 
 ### LM Studio
 

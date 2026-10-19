@@ -125,6 +125,13 @@ def test_lm_studio_provider_rejects_malformed_native_response():
         provider.generate("Extract merchant name")
 
 
+def test_lm_studio_provider_preserves_empty_answer_for_absent_field():
+    provider = LMStudioProvider("local-model", "http://localhost:1234", session=FakeSession(
+        post_payload={"output": [], "stats": {"total_output_tokens": 1, "reasoning_output_tokens": 0}}
+    ))
+    assert provider.generate("Extract years in business; return empty when absent") == ""
+
+
 def test_factory_rejects_unknown_provider():
     with pytest.raises(ValueError, match="Unsupported LLM provider"):
         create_provider("not-real", "model")

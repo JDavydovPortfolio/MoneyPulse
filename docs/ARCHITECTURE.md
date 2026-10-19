@@ -40,6 +40,8 @@ A model-proposed value must reconcile with the OCR chunk that produced it before
 
 Response cleanup strips only recognized field/answer prefixes, preserving legitimate colons inside values.
 
+When no document-type proposal is accepted, the parser can derive `application` from explicit business/merchant-name and requested-funding-amount labels. It checks all chunks for conflicting invoice, statement, agreement or contract wording first. This fallback retains raw model attempts and adds a visible `flagged_issues` explanation, producing `needs_review` after domain validation. It never fills missing financial values.
+
 ### `src/schema.py`
 
 Defines extraction schema version `1.0` and validates exact expected fields, nested types, review metadata, and provenance. Unexpected/missing schema elements fail closed rather than being silently coerced.

@@ -10,7 +10,7 @@ MoneyPulse converts merchant applications and supporting financial documents int
 
 ![MoneyPulse desktop processing a fictional merchant application](docs/images/moneypulse-demo.png)
 
-Actual desktop screenshot using a generated fictional document and real Tesseract OCR.
+Actual desktop screenshot using a generated fictional document, real Tesseract OCR, and the deterministic fixture provider. It demonstrates the review interface, not model accuracy.
 
 ## What MoneyPulse does
 
@@ -68,7 +68,7 @@ The model is not used to invent missing financial facts, estimate revenue from a
 | llama.cpp | OpenAI-compatible local HTTP | `http://localhost:8080` |
 | Hugging Face Transformers | In-process | Optional dependency set |
 
-MoneyPulse defaults to **Qwen3 8B** for local extraction. **Qwen3 4B** is a lower-memory option.
+MoneyPulse defaults to **Qwen3 8B** for local extraction. Qwen3 4B uses less memory, but did not pass the October 19 document-classification smoke check and is not a verified substitute. Validate your selected model on your own document layouts; see the [verification record](docs/VERIFICATION.md).
 
 ## Quick start
 
@@ -80,7 +80,7 @@ cd MoneyPulse
 python -m venv .venv
 ```
 
-Activate the environment, then install the core dependencies:
+Activate with `.\.venv\Scripts\Activate.ps1` in Windows PowerShell or `source .venv/bin/activate` on Linux/macOS, then install the core dependencies. If PowerShell blocks activation, call `.\.venv\Scripts\python.exe` directly instead of `python`.
 
 ```bash
 python -m pip install --upgrade pip
@@ -131,6 +131,8 @@ Model output is treated as proposed data. Before a field value can propagate, Mo
 Examples include matching requested funding amounts near request/funding language, matching revenue values near revenue language, matching processing-volume values near processing/volume language, and normalizing identifiers/contact fields before comparing them with OCR text.
 
 Source grounding is followed by versioned schema validation and deterministic domain checks. The resulting structured data and provenance remain available for analyst/underwriter review before downstream use.
+
+If no model document-type proposal is accepted, an explicit business/merchant-name label together with a requested-funding-amount label can classify the document as an application. Conflicting invoice, statement, agreement or contract wording disables this fallback. The derived classification is visibly flagged for review; it does not supply missing financial values or approve the document.
 
 ## Privacy model
 

@@ -40,7 +40,7 @@ MoneyPulse supports interchangeable local-model backends:
 - llama.cpp-compatible HTTP servers;
 - optional in-process Hugging Face Transformers.
 
-The current local default is Qwen3 8B, with Qwen3 4B as a lower-memory alternative. Provider/model settings are configurable from the desktop application or configuration file.
+The current local default is Qwen3 8B. Provider/model settings are configurable from the desktop application or configuration file. Qwen3 4B is a lower-memory choice, but failed the recorded document-classification smoke check through LM Studio; it is not a verified substitute. See [verification results](VERIFICATION.md).
 
 ## Data-quality controls
 
