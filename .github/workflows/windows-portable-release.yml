@@ -1,0 +1,71 @@
+name: Build Windows portable release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "New release version (for example v1.0.1)"
+        required: true
+        default: "v1.0.1"
+
+permissions:
+  contents: write
+
+jobs:
+  windows-portable:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-build.txt -c constraints-tested.txt
+          python -m pip check
+      - name: Build executable
+        shell: pwsh
+        run: |
+          python -m PyInstaller --noconfirm --clean build-lightweight.spec
+          if (!(Test-Path "dist/MoneyPulse-Local.exe")) { throw "Executable missing" }
+      - name: Smoke-test packaged launch
+        shell: pwsh
+        run: |
+          $exe = (Resolve-Path "dist/MoneyPulse-Local.exe").Path
+          $proc = Start-Process -FilePath $exe -PassThru
+          Start-Sleep -Seconds 20
+          $proc.Refresh()
+          if ($proc.HasExited) { throw "Application exited during startup with code $($proc.ExitCode)" }
+          Stop-Process -Id $proc.Id -Force
+      - name: Package portable build
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force package | Out-Null
+          Copy-Item dist/MoneyPulse-Local.exe package/
+          Copy-Item README.md,LICENSE package/
+          @'
+          MoneyPulse portable Windows build
+          Run MoneyPulse-Local.exe.
+          Python is not required.
+          OCR requires Tesseract and Poppler to be installed and available on PATH.
+          A local model provider (such as LM Studio or Ollama) is required for live extraction.
+          No real financial documents should be used for initial testing.
+          '@ | Set-Content -Encoding utf8 package/START-HERE.txt
+          Compress-Archive -Path package/* -DestinationPath "MoneyPulse-Windows-x64.zip"
+          Get-FileHash MoneyPulse-Windows-x64.zip -Algorithm SHA256 | Format-List | Out-File "MoneyPulse-Windows-x64.sha256.txt"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MoneyPulse-Windows-x64
+          path: |
+            MoneyPulse-Windows-x64.zip
+            MoneyPulse-Windows-x64.sha256.txt
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ inputs.version }}
+        shell: pwsh
+        run: |
+          gh release create "$env:RELEASE_VERSION" MoneyPulse-Windows-x64.zip MoneyPulse-Windows-x64.sha256.txt --draft --title "MoneyPulse $env:RELEASE_VERSION (Windows portable)" --notes "Windows portable candidate. Requires Tesseract and Poppler for OCR and a local model provider for live extraction. Build and launch smoke tested on GitHub-hosted Windows. Manual OCR/GUI acceptance still required before publishing."
