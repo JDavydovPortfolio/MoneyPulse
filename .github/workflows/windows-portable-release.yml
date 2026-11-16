@@ -1,6 +1,9 @@
 name: Build Windows portable release
 
 on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/windows-portable-release.yml']
   workflow_dispatch:
     inputs:
       version:
@@ -65,7 +68,7 @@ jobs:
       - name: Create draft release
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_VERSION: ${{ inputs.version }}
+          RELEASE_VERSION: ${{ inputs.version || 'v1.0.1' }}
         shell: pwsh
         run: |
           gh release create "$env:RELEASE_VERSION" MoneyPulse-Windows-x64.zip MoneyPulse-Windows-x64.sha256.txt --draft --title "MoneyPulse $env:RELEASE_VERSION (Windows portable)" --notes "Windows portable candidate. Requires Tesseract and Poppler for OCR and a local model provider for live extraction. Build and launch smoke tested on GitHub-hosted Windows. Manual OCR/GUI acceptance still required before publishing."
