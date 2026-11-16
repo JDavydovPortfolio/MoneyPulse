@@ -1,0 +1,51 @@
+# Free Windows build alternative when GitHub Actions is unavailable.
+# AppVeyor open-source tier supports public GitHub repositories.
+version: 1.0.{build}
+image: Visual Studio 2022
+platform: x64
+clone_depth: 1
+skip_tags: true
+
+environment:
+  PYTHONUTF8: 1
+
+install:
+  - ps: |
+      $ErrorActionPreference = 'Stop'
+      $python = 'C:\Python312-x64\python.exe'
+      if (!(Test-Path $python)) { throw 'Python 3.12 x64 missing from AppVeyor image' }
+      & $python -m pip install --upgrade pip
+      if ($LASTEXITCODE -ne 0) { throw 'pip upgrade failed' }
+      & $python -m pip install -r requirements-build.txt
+      if ($LASTEXITCODE -ne 0) { throw 'dependency installation failed' }
+      & $python -m pip check
+      if ($LASTEXITCODE -ne 0) { throw 'dependency consistency check failed' }
+
+build_script:
+  - ps: |
+      $ErrorActionPreference = 'Stop'
+      $python = 'C:\Python312-x64\python.exe'
+      & $python -m PyInstaller --noconfirm --clean build-lightweight.spec
+      if ($LASTEXITCODE -ne 0) { throw 'PyInstaller build failed' }
+      if (!(Test-Path 'dist\MoneyPulse-Local.exe')) { throw 'Executable missing' }
+      if ((Get-Item 'dist\MoneyPulse-Local.exe').Length -lt 1000000) { throw 'Executable unexpectedly small' }
+      New-Item -ItemType Directory -Force package | Out-Null
+      Copy-Item dist\MoneyPulse-Local.exe package\
+      Copy-Item README.md,LICENSE package\
+      @'
+      MoneyPulse portable Windows build
+      Run MoneyPulse-Local.exe; Python is not required.
+      OCR needs separately installed Tesseract and Poppler on PATH.
+      Live AI extraction requires a separately running local model provider.
+      This CI build has NOT passed native GUI/OCR acceptance testing.
+      '@ | Set-Content -Encoding utf8 package\START-HERE.txt
+      Compress-Archive -Path package\* -DestinationPath MoneyPulse-Windows-x64.zip -Force
+      (Get-FileHash MoneyPulse-Windows-x64.zip -Algorithm SHA256).Hash | Set-Content MoneyPulse-Windows-x64.sha256.txt
+
+test: off
+
+artifacts:
+  - path: MoneyPulse-Windows-x64.zip
+    name: MoneyPulse-Windows-x64
+  - path: MoneyPulse-Windows-x64.sha256.txt
+    name: SHA256
