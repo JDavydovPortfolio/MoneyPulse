@@ -150,7 +150,9 @@ def _extract_from_image(
         raise ValueError(
             f"Image dimensions exceed configured OCR pixel limit of {max_image_pixels} pixels"
         )
-    image = cv2.imread(str(image_path))
+    # Open the path through Python so the Windows decoder receives image bytes.
+    image_bytes = np.fromfile(image_path, dtype=np.uint8)
+    image = cv2.imdecode(image_bytes, cv2.IMREAD_COLOR)
     if image is None:
         raise ValueError(f"Failed to load image: {image_path}")
     processed = _preprocess_image(image)

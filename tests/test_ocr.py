@@ -17,8 +17,9 @@ def _font(size=36):
     return ImageFont.load_default(size=size)
 
 
-def test_ocr_extracts_synthetic_image(tmp_path):
-    image_path = tmp_path / "synthetic.png"
+@pytest.mark.parametrize("filename", ["synthetic.png", "synthetic caf\u00e9.png"])
+def test_ocr_extracts_synthetic_image(tmp_path, filename):
+    image_path = tmp_path / filename
     image = Image.new("RGB", (1800, 500), "white")
     draw = ImageDraw.Draw(image)
     draw.text((50, 60), "MONEYPULSE SYNTHETIC DEMO", fill="black", font=_font(42))

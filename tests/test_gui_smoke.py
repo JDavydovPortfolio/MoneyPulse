@@ -122,3 +122,21 @@ def test_stop_keeps_processing_disabled_until_worker_finishes(tmp_path, monkeypa
         assert window.worker_thread.wait(1000)
         app.processEvents()
         window.close()
+
+
+def test_desktop_uses_explicit_application_data_directory(tmp_path, monkeypatch):
+    from src.config import save_config
+    monkeypatch.chdir(tmp_path)
+    data_dir = tmp_path / "Local App Data" / "MoneyPulse"
+    data_dir.mkdir(parents=True)
+    save_config({"llm_provider": "lm_studio", "model": "synthetic-test"}, data_dir / "config.yaml")
+    app = QApplication.instance() or QApplication([])
+    window = PremiumDocumentProcessor(data_dir=data_dir)
+
+    assert window.pipeline.llm.provider_id == "lm_studio"
+    assert window.pipeline.llm.model == "synthetic-test"
+    assert window.output_dir == data_dir / "output"
+    assert (data_dir / "output").is_dir()
+    assert not (tmp_path / "output").exists()
+
+    window.close()

@@ -2,7 +2,15 @@
 
 All notable MoneyPulse changes are documented here.
 
-## Unreleased
+## v1.0.1 - 2026-11-16
+
+### Windows application
+
+- Add a local PyInstaller Windows x64 executable, with a ZIP containing three fictional documents and setup instructions.
+- Prevent third-party DLLs on the build PATH from overriding Windows libraries used by Qt.
+- Save packaged desktop configuration, results, and logs in per-user local application data.
+- Refresh the desktop layout and keep system checks off the GUI thread. Show the reason when a document fails to process.
+- Support image filenames containing Unicode characters on Windows.
 
 ### Verification and setup
 

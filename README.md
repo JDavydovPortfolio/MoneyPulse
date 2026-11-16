@@ -10,7 +10,18 @@ MoneyPulse converts merchant applications and supporting financial documents int
 
 ![MoneyPulse desktop processing a fictional merchant application](docs/images/moneypulse-demo.png)
 
-Actual desktop screenshot using a generated fictional document, real Tesseract OCR, and the deterministic fixture provider. It demonstrates the review interface, not model accuracy.
+Earlier desktop version using a generated fictional document, real Tesseract OCR, and the deterministic fixture provider. It demonstrates the review interface, not model accuracy.
+
+## Download for Windows x64
+
+[Standalone Windows EXE](https://github.com/JDavydovPortfolio/MoneyPulse/releases/download/v1.0.1/MoneyPulse-Local.exe) · [Windows x64 ZIP with samples](https://github.com/JDavydovPortfolio/MoneyPulse/releases/download/v1.0.1/MoneyPulse-Windows-x64.zip) · [SHA-256 checksum](https://github.com/JDavydovPortfolio/MoneyPulse/releases/download/v1.0.1/MoneyPulse-Windows-x64.sha256.txt)
+
+Extract the ZIP and open `MoneyPulse-Local.exe`. The unsigned package includes Python and Qt, three fictional samples, and `START-HERE.txt`. It was tested on Windows 11 x64.
+
+- **OCR** requires Tesseract with English data and `tesseract.exe` on PATH. For PDFs, also put Poppler's `pdfinfo.exe` and `pdftoppm.exe` on PATH. [Windows OCR setup](docs/SETUP.md)
+- **Extraction** requires a running local model server and an installed model. Open **Settings → Configuration**, enter the server and model, and click **Test System**. The Windows executable supports Ollama, LM Studio, and llama.cpp-compatible HTTP endpoints. [Provider setup](docs/SETUP.md)
+- **Local files** are stored under `%LOCALAPPDATA%\MoneyPulse`. Use **Open Output Folder** to find JSON and CSV exports. Startup and processing logs are saved under `logs` and `output\logs`.
+
 
 ## What MoneyPulse does
 
