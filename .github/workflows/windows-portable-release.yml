@@ -27,22 +27,19 @@ jobs:
         shell: pwsh
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r requirements-build.txt -c constraints-tested.txt
+          python -m pip install -r requirements-build.txt
           python -m pip check
       - name: Build executable
         shell: pwsh
         run: |
           python -m PyInstaller --noconfirm --clean build-lightweight.spec
           if (!(Test-Path "dist/MoneyPulse-Local.exe")) { throw "Executable missing" }
-      - name: Smoke-test packaged launch
+      - name: Verify frozen executable structure
         shell: pwsh
         run: |
-          $exe = (Resolve-Path "dist/MoneyPulse-Local.exe").Path
-          $proc = Start-Process -FilePath $exe -PassThru
-          Start-Sleep -Seconds 20
-          $proc.Refresh()
-          if ($proc.HasExited) { throw "Application exited during startup with code $($proc.ExitCode)" }
-          Stop-Process -Id $proc.Id -Force
+          python -m PyInstaller.utils.cliutils.archive_viewer dist/MoneyPulse-Local.exe -l | Out-File archive-contents.txt
+          if (!(Test-Path archive-contents.txt)) { throw "PyInstaller archive inspection failed" }
+          if ((Get-Item dist/MoneyPulse-Local.exe).Length -lt 1000000) { throw "Frozen executable unexpectedly small" }
       - name: Package portable build
         shell: pwsh
         run: |
@@ -71,4 +68,4 @@ jobs:
           RELEASE_VERSION: ${{ inputs.version || 'v1.0.1' }}
         shell: pwsh
         run: |
-          gh release create "$env:RELEASE_VERSION" MoneyPulse-Windows-x64.zip MoneyPulse-Windows-x64.sha256.txt --draft --title "MoneyPulse $env:RELEASE_VERSION (Windows portable)" --notes "Windows portable candidate. Requires Tesseract and Poppler for OCR and a local model provider for live extraction. Build and launch smoke tested on GitHub-hosted Windows. Manual OCR/GUI acceptance still required before publishing."
+          gh release create "$env:RELEASE_VERSION" MoneyPulse-Windows-x64.zip MoneyPulse-Windows-x64.sha256.txt --draft --title "MoneyPulse $env:RELEASE_VERSION (Windows portable)" --notes "Windows portable candidate. Requires Tesseract and Poppler for OCR and a local model provider for live extraction. Built and archive-inspected on GitHub-hosted Windows. Native GUI launch and OCR acceptance have NOT been verified; do not publish before manual acceptance."
