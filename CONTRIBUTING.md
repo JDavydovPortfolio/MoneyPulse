@@ -32,7 +32,7 @@ Dependency updates should deliberately update the tested constraints, pass `pip 
 - Keep changes focused and reviewable.
 - Never commit real merchant/applicant documents, credentials, tax IDs, bank data, generated outputs, or logs.
 - Use synthetic/redacted fixtures only.
-- Treat model output as untrusted and preserve source grounding, structural validation, domain validation, and provenance.
+- Pass model-proposed fields through deterministic source grounding, structural validation, domain validation, and provenance capture.
 - Keep the generic MoneyPulse pipeline focused on document intake, source-backed field extraction, validation, review, and downstream data preparation.
 - Do not infer missing merchant financial facts or add autonomous approval/decline recommendations to the extraction pipeline.
 - If a deployment adds lender/ISO-specific underwriting rules downstream, keep them separate from LLM-generated text, deterministic, auditable, and based only on reviewed source-backed inputs.
