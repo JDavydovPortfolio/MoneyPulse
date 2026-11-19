@@ -2,7 +2,7 @@
 
 ## Overview
 
-MoneyPulse is a local-first document-intelligence pipeline for Merchant Cash Advance underwriting operations. It converts merchant applications and supporting financial documents into structured, source-backed data for analyst and underwriter review.
+MoneyPulse is a Python-based document-intelligence and systems-integration project for Merchant Cash Advance underwriting operations. It transforms merchant applications and financial documents into structured, source-backed data for analyst and underwriter review.
 
 The project combines OCR, configurable local-model extraction, source grounding, deterministic schema/domain validation, desktop/headless workflows, reviewable local output, and optional CRM integration.
 
@@ -29,7 +29,7 @@ merchant documents
 
 The local model maps OCR text into structured fields. MoneyPulse accepts a proposed value only when it can reconcile that value with the OCR source.
 
-Annual revenue, processing volume, years in business, requested funding, contact information, and other fields therefore remain tied to what appears in the source document. Unsupported values are discarded instead of being synthesized.
+Annual revenue, processing volume, years in business, requested funding, contact information, and other accepted fields remain traceable to their source documents, creating an auditable evidence trail.
 
 ## Local AI architecture
 
@@ -40,11 +40,11 @@ MoneyPulse supports interchangeable local-model backends:
 - llama.cpp-compatible HTTP servers;
 - optional in-process Hugging Face Transformers.
 
-The current local default is Qwen3 8B. Provider/model settings are configurable from the desktop application or configuration file. Qwen3 4B is a lower-memory choice, but failed the recorded document-classification smoke check through LM Studio; it is not a verified substitute. See [verification results](VERIFICATION.md).
+The current default is Qwen3 8B. Provider/model settings are configurable in the desktop application or configuration file, and recorded evaluation results are available in [verification history](VERIFICATION.md).
 
 ## Data-quality controls
 
-Before a model-proposed value can propagate through the pipeline, MoneyPulse can:
+Before a model-proposed value can propagate through the pipeline, MoneyPulse applies controls to:
 
 1. compare the proposed value with OCR source text;
 2. enforce a versioned output schema;
