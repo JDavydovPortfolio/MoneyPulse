@@ -10,13 +10,13 @@ Preserve working software. Prefer small, evidence-backed changes over architectu
 
 ## Non-negotiable trust boundaries
 
-1. **Model output is untrusted.** Do not bypass source grounding, versioned schema validation, domain validation, provenance, or explicit review state.
-2. **Never invent missing financial/contact values.** Unsupported model guesses must be rejected rather than silently corrected, synthesized, estimated, or inferred.
+1. **Require source verification.** Every model-proposed field passes source grounding, versioned schema validation, domain validation, provenance capture, and explicit review state.
+2. **Preserve source fidelity.** Missing financial/contact values remain empty; candidates without source evidence are excluded from validated output.
 3. **Keep extraction source-backed.** The local model may map OCR text to explicit fields, but annual revenue, processing volume, years in business, funding amounts, contact details, and other facts must remain supported by source text.
 4. **Remote inference is opt-in.** HTTP model providers remain local/private by default. Any path that sends OCR-derived text to a public endpoint requires deliberate configuration and documentation.
 5. **External transmission stays explicit.** CRM/network integrations must not happen implicitly as a side effect of local processing.
 6. **Synthetic fixtures only.** Never add real merchant/applicant documents, tax IDs, bank data, credentials, generated runtime output, logs, or local configuration to the repository.
-7. **No unsupported claims.** Do not add accuracy, speed, privacy, security, compliance, underwriting-decision, adoption, or benchmark claims without reproducible evidence.
+7. **Evidence-led technical claims.** Substantiate accuracy, speed, privacy, security, compliance, underwriting-decision, adoption, and benchmark statements with reproducible evidence.
 
 ## Dependency boundaries
 
