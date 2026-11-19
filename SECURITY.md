@@ -1,6 +1,6 @@
 # Security Policy
 
-MoneyPulse can process financially sensitive data. Treat security and privacy issues accordingly.
+MoneyPulse implements source-verified extraction, structured-data safeguards, privacy-conscious model connectivity, and controlled downstream integration for financial-document workflows.
 
 ## Supported code
 
@@ -14,20 +14,20 @@ Use GitHub private vulnerability reporting when available. If it is unavailable,
 
 A useful private report includes the affected commit/tag, component, synthetic reproduction steps, impact, and remediation ideas if known.
 
-## Trust boundaries
+## Data integrity and security controls
 
-Model output is untrusted. MoneyPulse now performs deterministic source grounding before an extracted value is propagated: proposed values must be reconciled with the OCR chunk that produced them. Format-equivalent values such as `$75,000` and `$75000` are normalized for comparison, while ungrounded model values are discarded. Document type is treated as classification data and must either appear directly or satisfy a narrow deterministic application-form signature. This grounding layer reduces plausible-looking hallucinations but does not replace human review.
+**Source-verified extraction.** MoneyPulse uses a deterministic verification gate to reconcile model-proposed fields with their originating OCR chunks before values enter structured output. Equivalent formats such as `$75,000` and `$75000` are normalized for comparison; values without source support are excluded. Document classification relies on explicit source evidence or a narrow, deterministic application-form signature. The resulting fields and provenance are available for evidence-based analyst review.
 
-The application enforces structural schema validation before domain validation and review state. Both public external CRM submission entry points require successful deterministic validation, literal boolean `review_approved: true`, and `review_state: approved`. The enterprise submitter also blocks transmission when local output preparation fails. These metadata checks are not a signed approval or access-control system; embedding applications must own validation and authenticated human approval, rather than accepting flags from untrusted clients.
+**Validated CRM integration.** Structural schema validation precedes domain validation and review-state evaluation. Both public external CRM submission entry points require successful deterministic validation, literal boolean `review_approved: true`, and `review_state: approved`. The enterprise submitter also stops transmission if local output preparation fails. These fields represent application review state; integrating applications should bind approvals to authenticated reviewer identities and enforce their own access controls.
 
-Model endpoints are local/private by default. HTTP providers accept loopback, `.localhost`, private-address, and link-local endpoints without additional configuration. Remote model endpoints are rejected unless the operator explicitly sets `allow_remote_llm: true`. Enabling that option means OCR-derived document content can leave the local machine/network and should be treated as a deliberate privacy decision.
+**Local-first model connectivity.** HTTP providers support loopback, `.localhost`, private-address, and link-local endpoints by default. Public remote inference requires explicit `allow_remote_llm: true` opt-in. Operators enabling remote inference can evaluate the destination and data-handling requirements before sending OCR-derived content beyond the local/private network.
 
-CSV exports prefix potentially executable formula strings with an apostrophe. JSON preserves source values. Keep escaping intact if another tool imports/re-exports CSV. OCR and processing-log views display document-derived text as plain text.
+**Safer data export and display.** CSV exports prefix potentially executable formula strings with an apostrophe, while JSON preserves source values. Integrating tools should retain CSV escaping on import or re-export. OCR and processing-log views display document-derived text as plain text.
 
-PDFs are rendered one page at a time. Rendering and OCR have operation timeouts plus configurable ceilings for input file size, PDF page count, and image/rendered-page pixel count. The defaults are intentionally conservative and can be raised for trusted documents. These controls bound routine resource use; the application is still not a malware sandbox. Keep Tesseract/Poppler and Python dependencies patched and process hostile files with appropriate OS isolation.
+**Bounded document processing.** PDFs are rendered one page at a time. Rendering and OCR have operation timeouts and configurable ceilings for input size, PDF page count, and image/rendered-page pixel count. Limits can be tuned for trusted inputs. Keep Tesseract, Poppler, and Python dependencies patched; use OS-level isolation for hostile or unknown documents.
 
-These controls reduce accidental propagation of malformed or unsupported model output; they are not a guarantee against every security or data-quality failure.
+Together, these controls provide layered verification and defensive handling across extraction, serialization, document processing, and external integration.
 
 ## Deployment responsibilities
 
-MoneyPulse is not a security/compliance certification. Operators are responsible for securing local model servers, file permissions, generated output, logs, credentials/configuration, explicitly enabled remote model endpoints, external CRM endpoints, backups, retention, and operating-system access controls.
+Operators configure and secure model servers, file permissions, generated output, logs, credentials, remote model endpoints, external CRM connections, backups, retention, and operating-system access controls according to their deployment environment.
