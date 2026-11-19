@@ -109,6 +109,3 @@ All notable MoneyPulse changes are documented here.
 - Reworked README/security/contributor guidance around local-first behavior and unsupported-claim removal.
 - Expanded `.gitignore` coverage and added synthetic examples/architecture documentation.
 
-## Historical pre-release baseline - 2025-08-06
-
-Historical project notes describe the initial Windows-oriented desktop application, OCR pipeline, local-model experiments, validation, and CRM adapter code. No GitHub release artifact or semantic-versioned release is implied by this historical baseline.
