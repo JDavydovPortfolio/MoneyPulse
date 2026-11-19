@@ -34,9 +34,9 @@ Defines the model-provider interface. Local HTTP providers use explicit request 
 
 ### `src/llm.py`
 
-Splits source text into word-bounded chunks and attempts each expected field across chunks. The model is used as a field-mapping aid.
+Splits source text into word-bounded chunks and attempts each expected field across chunks. A provider-agnostic model layer generates candidate field mappings for deterministic source reconciliation.
 
-A model-proposed value must reconcile with the OCR chunk that produced it before propagation. Unsupported guesses are discarded, and raw attempts remain in provenance. If a financial value such as annual revenue, processing volume, years in business, or requested amount is not supported by OCR source text, MoneyPulse leaves it missing rather than inferring it.
+A model-proposed field must reconcile with its originating OCR chunk before entering structured output. Accepted values retain source backing, raw attempts remain in provenance, and missing financial fields are preserved for reviewer follow-up.
 
 Response cleanup strips only recognized field/answer prefixes, preserving legitimate colons inside values.
 
@@ -74,7 +74,7 @@ Configuration is a bounded set of provider/model/OCR settings stored in ignored 
 
 ```text
 OCR text (source evidence)
-    -> model-proposed field value (untrusted)
+    -> model-proposed candidate (pending source verification)
     -> source-grounded structured field
     -> schema validation
     -> domain validation
@@ -83,9 +83,9 @@ OCR text (source evidence)
     -> optional downstream workflow
 ```
 
-A model response never becomes trusted merely because it parsed successfully. Missing values are not supplied by model inference.
+Model-proposed fields are accepted only after OCR reconciliation and deterministic validation, with missing values surfaced for review.
 
-For raw bank statements or processor statements, deriving revenue, deposit history, processing volume, or similar underwriting metrics requires dedicated statement-analysis logic; generic field extraction is not treated as a substitute.
+Statement-level underwriting metrics such as revenue, deposit history, and processing volume can be implemented as dedicated downstream calculation components with their own source evidence and validation.
 
 ## Provenance
 
@@ -93,7 +93,7 @@ Extraction provenance records source file, provider/model, document chunk count,
 
 ## Privacy boundaries
 
-Local-first is not a guarantee of an offline deployment. Network access can occur for package/model downloads, non-local model endpoints, or approved CRM integrations. Operators remain responsible for endpoint exposure, credentials, filesystem permissions, retention, backups, and logs.
+With a local backend selected, OCR and inference can operate on the operator's machine or private network. Network activities such as model downloads, opt-in remote inference, and approved CRM integrations are separately configurable. Operators manage endpoint exposure, credentials, filesystem permissions, retention, backups, and logs.
 
 ## Optional dependency boundaries
 
