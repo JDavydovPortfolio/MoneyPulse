@@ -1,8 +1,8 @@
 # MoneyPulse
 
-**Local-first AI document processing for Merchant Cash Advance underwriting and operations.**
+**Python document intelligence combining OCR, configurable local AI, deterministic verification, and systems integration.**
 
-MoneyPulse converts merchant applications and supporting financial documents into structured, source-backed data for analyst and underwriter review. It combines OCR, configurable local-model field extraction, source grounding, deterministic validation, local JSON/CSV output, and optional downstream CRM integrations.
+MoneyPulse demonstrates an end-to-end document-processing architecture for merchant underwriting intake: PDF/image OCR, configurable local-model extraction, deterministic source reconciliation, schema and domain checks, review workflows, JSON/CSV exports, and optional CRM adapters. Its desktop application and headless CLI showcase modular Python engineering, provider abstraction, defensive data handling, and integration design.
 
 **Document → OCR → source-backed field extraction → validation → analyst/underwriter review → downstream workflow**
 
@@ -10,7 +10,18 @@ MoneyPulse converts merchant applications and supporting financial documents int
 
 ![MoneyPulse desktop processing a fictional merchant application](docs/images/moneypulse-demo.png)
 
-Earlier desktop version using a generated fictional document, real Tesseract OCR, and the deterministic fixture provider. It demonstrates the review interface, not model accuracy.
+Desktop review workflow using a fictional merchant document, Tesseract OCR, and a deterministic test provider.
+
+## Engineering highlights
+
+- **Python application architecture:** PySide6 desktop UI, headless CLI, reusable processing pipeline, and configuration management.
+- **Document processing:** Tesseract OCR, Poppler PDF rendering, OpenCV preprocessing, and structured field extraction.
+- **Model integration:** configurable Ollama, LM Studio, llama.cpp-compatible HTTP providers, and optional Hugging Face Transformers.
+- **Data integrity:** deterministic source grounding, versioned schemas, domain validation, provenance, and explicit review state.
+- **Systems integration:** local JSON/CSV outputs, optional CRM adapters, validation and approval gates, and safe CSV serialization.
+- **Defensive engineering:** operation timeouts, configurable resource limits, structured error handling, and automated regression tests.
+
+Explore the [architecture](docs/ARCHITECTURE.md), [verification history](docs/VERIFICATION.md), and [project brief](docs/PROJECT_BRIEF.md) for implementation details and reproducible checks.
 
 ## Download for Windows x64
 
@@ -34,7 +45,7 @@ Extract the ZIP and open `MoneyPulse-Local.exe`. The unsigned package includes P
 - Produces local JSON and CSV artifacts for review and downstream workflows.
 - Supports optional CRM integrations behind explicit approval gates.
 
-Financial fields remain source-backed: if a value is not supported by OCR text, MoneyPulse leaves the field missing instead of filling it by model inference.
+Financial fields remain source-backed: accepted values reconcile to OCR evidence, and unsupported candidates are excluded from structured output.
 
 ## Why it exists
 
@@ -55,20 +66,20 @@ document
   -> optional downstream CRM / underwriting workflow
 ```
 
-The local model acts as a field-extraction aid. MoneyPulse independently checks proposed values against OCR text before allowing them to propagate through the pipeline.
+The local model supplies candidate field mappings; an independent verification stage reconciles each candidate against OCR source text before it enters structured output.
 
 ## Why use a local model?
 
 OCR answers **what text is on the page**. It does not reliably answer **which pieces of that text belong in which structured business fields** when forms, labels, ordering, and layouts vary across ISOs and document types.
 
-The local model is used only for that semantic mapping step: it proposes values for fields such as merchant name, requested amount, address, annual revenue, years in business, or processing volume when those values are explicitly present in the OCR text. MoneyPulse then checks the proposal against the source text before accepting it.
+The local model handles semantic field mapping across varied forms, proposing values for merchant name, requested amount, address, annual revenue, years in business, and processing volume. MoneyPulse then independently verifies the candidates against OCR evidence.
 
 This gives MoneyPulse two practical advantages:
 
 - **Template flexibility:** different forms can use different labels and layouts without requiring a custom parser for every document template.
 - **Local handling of sensitive data:** inference can run on the operator's machine or private network instead of requiring merchant document text to be sent to a hosted AI API.
 
-The model is not used to invent missing financial facts, estimate revenue from a raw bank statement, calculate merchant risk, or make an approval/decline decision. Known rigid templates can also be handled with deterministic extraction; the local model is most useful when document wording and layout vary.
+The pipeline specializes in source-backed document intake and structured data preparation, with underwriting calculations and lending decisions handled as separate downstream workflows. Known rigid templates can use deterministic extraction, while local-model mapping supports variation in document wording and layout.
 
 ## Supported local-model providers
 
@@ -79,7 +90,7 @@ The model is not used to invent missing financial facts, estimate revenue from a
 | llama.cpp | OpenAI-compatible local HTTP | `http://localhost:8080` |
 | Hugging Face Transformers | In-process | Optional dependency set |
 
-MoneyPulse defaults to **Qwen3 8B** for local extraction. Qwen3 4B uses less memory, but did not pass the October 19 document-classification smoke check and is not a verified substitute. Validate your selected model on your own document layouts; see the [verification record](docs/VERIFICATION.md).
+MoneyPulse defaults to **Qwen3 8B** for local extraction, the model used in the recorded successful Windows live-model workflow. Provider and model selection are configurable; [verification results](docs/VERIFICATION.md) document tested combinations.
 
 ## Quick start
 
@@ -137,7 +148,7 @@ The CLI uses the same extraction and validation pipeline as the desktop applicat
 
 ## Source grounding and validation
 
-Model output is treated as proposed data. Before a field value can propagate, MoneyPulse checks that it is supported by the OCR source text.
+Model-proposed field candidates pass deterministic source verification before they enter validated structured output.
 
 Examples include matching requested funding amounts near request/funding language, matching revenue values near revenue language, matching processing-volume values near processing/volume language, and normalizing identifiers/contact fields before comparing them with OCR text.
 
