@@ -111,6 +111,4 @@ All notable MoneyPulse changes are documented here.
 
 ### Historical pre-release baseline - 2025-08-06
 
-
-
--Historical project notes describe the initial Windows-oriented desktop application, OCR pip eline, local-model experiments, validation, and CRM adapter code.
+- Historical project notes describe the initial Windows-oriented desktop application, OCR pip eline, local-model experiments, validation, and CRM adapter code.
