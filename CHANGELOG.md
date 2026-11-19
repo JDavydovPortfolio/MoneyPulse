@@ -109,7 +109,7 @@ All notable MoneyPulse changes are documented here.
 - Reworked README/security/contributor guidance around local-first behavior and unsupported-claim removal.
 - Expanded `.gitignore` coverage and added synthetic examples/architecture documentation.
 
-# Historical pre-release baseline - 2025-08-06
+### Historical pre-release baseline - 2025-08-06
 113
 
 114
